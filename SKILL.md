@@ -29,13 +29,23 @@ Run the scripts in `scripts/account`, `scripts/list`, and `scripts/reminder`.
 - `scripts/reminder/create.applescript`
 - `scripts/reminder/show.applescript`
 - `scripts/reminder/edit.applescript`
+- `scripts/reminder/edit-by-id.applescript`
 - `scripts/reminder/delete.applescript`
+- `scripts/reminder/delete-by-id.applescript`
 - `scripts/reminder/search.applescript`
 - `scripts/reminder/get.applescript`
+- `scripts/reminder/get-by-id.applescript`
 - `scripts/reminder/exists.applescript`
 - `scripts/reminder/count.applescript`
+- `scripts/reminder/today.applescript`
+- `scripts/reminder/overdue.applescript`
+- `scripts/reminder/upcoming.applescript`
+- `scripts/reminder/due-before.applescript`
+- `scripts/reminder/due-range.applescript`
+- `scripts/reminder/today-or-overdue.applescript`
 - `scripts/reminder/complete.applescript`
 - `scripts/reminder/move.applescript`
+- `scripts/reminder/move-by-id.applescript`
 
 ## Accounts
 
@@ -151,6 +161,12 @@ Search lists by text in the list name:
 osascript scripts/list/search.applescript text "Err"
 ```
 
+Search lists with JSON output:
+
+```bash
+osascript scripts/list/search.applescript text "Err" --format=json
+```
+
 ## Reminders
 
 List all reminders:
@@ -169,6 +185,54 @@ Count reminders in one list:
 
 ```bash
 osascript scripts/reminder/count.applescript "Inbox"
+```
+
+List reminders due today in all lists:
+
+```bash
+osascript scripts/reminder/today.applescript
+```
+
+List reminders due today in one list:
+
+```bash
+osascript scripts/reminder/today.applescript "Inbox"
+```
+
+List overdue reminders in all lists:
+
+```bash
+osascript scripts/reminder/overdue.applescript
+```
+
+List overdue reminders in one list:
+
+```bash
+osascript scripts/reminder/overdue.applescript "Inbox"
+```
+
+List reminders due in the next 7 days:
+
+```bash
+osascript scripts/reminder/upcoming.applescript 7
+```
+
+List reminders due before a date:
+
+```bash
+osascript scripts/reminder/due-before.applescript "1/1/2030"
+```
+
+List reminders due in a date range:
+
+```bash
+osascript scripts/reminder/due-range.applescript "1/1/2020" "1/1/2030"
+```
+
+List focus reminders (today + overdue):
+
+```bash
+osascript scripts/reminder/today-or-overdue.applescript
 ```
 
 Create a reminder:
@@ -231,6 +295,24 @@ Read a reminder property:
 osascript scripts/reminder/get.applescript "Inbox" "Buy milk" body
 ```
 
+Read a reminder property by id:
+
+```bash
+osascript scripts/reminder/get-by-id.applescript "Inbox" "x-apple-reminder://1234-ABCD" body
+```
+
+Edit a reminder by id:
+
+```bash
+osascript scripts/reminder/edit-by-id.applescript "Inbox" "x-apple-reminder://1234-ABCD" priority 1
+```
+
+Delete a reminder by id:
+
+```bash
+osascript scripts/reminder/delete-by-id.applescript "Inbox" "x-apple-reminder://1234-ABCD"
+```
+
 Supported reminder properties:
 
 - `name`
@@ -259,10 +341,25 @@ Move a reminder to another list:
 osascript scripts/reminder/move.applescript "Inbox" "Buy milk" "Errands"
 ```
 
+Move a reminder to another list by id:
+
+```bash
+osascript scripts/reminder/move-by-id.applescript "Inbox" "x-apple-reminder://1234-ABCD" "Errands"
+```
+
+Any reminder query script can return JSON:
+
+```bash
+osascript scripts/reminder/today.applescript --format=json
+osascript scripts/reminder/overdue.applescript "Inbox" --format=json
+osascript scripts/reminder/search.applescript text "milk" "Inbox" --format=json
+```
+
 ## Search
 
 There is no native AppleScript command named `search` in Reminders.
 Search means lookup by name or id, filtering with `whose`, or manual text scan.
+Search in this skill trims surrounding spaces and matches case-insensitive text.
 
 Find one reminder by exact name inside one list:
 
@@ -312,6 +409,12 @@ Find reminders by free text in title or notes:
 osascript scripts/reminder/search.applescript text "milk" "Inbox"
 ```
 
+Find reminders by text with JSON output:
+
+```bash
+osascript scripts/reminder/search.applescript text "  MILK  " "Inbox" --format=json
+```
+
 ## AppleScript Command Map
 
 These are the published Reminders AppleScript actions and the script to use for each one.
@@ -324,6 +427,9 @@ These are the published Reminders AppleScript actions and the script to use for 
 - `move`: `scripts/reminder/move.applescript`
 - `get`: `scripts/list/get.applescript`, `scripts/reminder/get.applescript`
 - `set`: `scripts/list/edit.applescript`, `scripts/reminder/edit.applescript`
+- `id-scoped reminder actions`: `scripts/reminder/get-by-id.applescript`, `scripts/reminder/edit-by-id.applescript`, `scripts/reminder/delete-by-id.applescript`, `scripts/reminder/move-by-id.applescript`
+- `date filters`: `scripts/reminder/today.applescript`, `scripts/reminder/overdue.applescript`, `scripts/reminder/upcoming.applescript`, `scripts/reminder/due-before.applescript`, `scripts/reminder/due-range.applescript`, `scripts/reminder/today-or-overdue.applescript`
+- `output format`: query and search scripts accept `--format=plain|json`
 - `duplicate`: exposed by the app, but unreliable for reminders. Do not use it as a normal workflow.
 - `open`, `close`, `save`, `print`, `quit`: standard app and window actions. They are not part of reminder data work and are not wrapped here.
 
@@ -332,5 +438,6 @@ These are the published Reminders AppleScript actions and the script to use for 
 - `show-*` opens the Reminders UI.
 - `duplicate` can fail with error `-1717`.
 - Date setters accept a macOS date string that AppleScript can parse on this Mac, or `missing` to clear the field.
+- Date filter scripts (`due-before`, `due-range`) also use macOS date parsing on this Mac.
 - There is no published AppleScript API for tags, smart lists, recurrence rules, attachments, shared assignees, URLs, or section grouping.
 - A reminder can report a `container` of type `reminder`, but the dictionary does not expose `reminders of reminder`, so subtask creation is not available as a normal operation.
