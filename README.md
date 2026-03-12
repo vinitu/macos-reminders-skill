@@ -2,7 +2,7 @@
 
 This repo stores a Codex skill for Apple Reminders.app on macOS.
 
-It documents the live AppleScript surface of Reminders.app and includes example scripts and smoke tests.
+It documents the live AppleScript surface of Reminders.app and includes runnable scripts.
 
 ## Installation
 
@@ -24,7 +24,6 @@ npx skills add vinitu/apple-reminders-skill
 - CRUD for lists and reminders.
 - Search and filtering with AppleScript object specifiers.
 - Safe examples for property updates, moving reminders, and UI reveal.
-- Live integration tests with temporary data.
 
 ## Tested Base
 
@@ -51,42 +50,25 @@ The command surface is split into three parts:
 
 See `SKILL.md` for the full matrix, notes, and examples.
 
-## Quick Start
+## How To Use
 
-Dump the live dictionary:
+Run skill actions with:
 
 ```bash
-make dictionary
+osascript scripts/<entity>/<action>.applescript [args...]
 ```
 
-List current reminder lists:
+Examples:
 
 ```bash
+osascript scripts/account/list.applescript
 osascript scripts/list/list.applescript
+osascript scripts/list/create.applescript "Errands"
+osascript scripts/reminder/create.applescript "Inbox" "Buy milk" "2 liters"
+osascript scripts/reminder/search.applescript incomplete "Inbox"
 ```
 
-Create a reminder:
-
-```bash
-osascript scripts/reminder/create.applescript Inbox "Buy milk" "2 liters"
-```
-
-Run the full test set:
-
-```bash
-make test
-```
-
-## Can AppleScripts Be Tested?
-
-Yes.
-
-In practice, AppleScript tests for Reminders are integration tests. They talk to the live app through `osascript`, create temporary data, verify behavior, and clean up after the run.
-
-This repo includes:
-
-- `tests/dictionary_contract.sh` to verify that the dictionary still exposes the expected commands and classes.
-- `tests/smoke_reminders.sh` to verify real create, read, update, move, complete, and delete flows.
+For the full command set and arguments, use `SKILL.md`.
 
 ## Important Limits
 
