@@ -1,9 +1,9 @@
 ---
-name: apple-reminders
+name: macos-reminders
 description: Use this skill when you need to control Apple Reminders.app on macOS with AppleScript. Covers list and reminder CRUD, property updates, search, and UI reveal.
 ---
 
-# Apple Reminders AppleScript
+# macOS Reminders AppleScript
 
 Use this skill when the task is about Apple Reminders.app on macOS and AppleScript is the required interface.
 

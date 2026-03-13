@@ -1,4 +1,4 @@
-# Apple Reminders AppleScript Skill
+# macOS Reminders AppleScript Skill
 
 This repo stores a Codex skill for Apple Reminders.app on macOS.
 
@@ -9,13 +9,13 @@ It documents the live AppleScript surface of Reminders.app and includes runnable
 Install with `skills.sh`:
 
 ```bash
-skills.sh add vinitu/apple-reminders-skill
+skills.sh add vinitu/macos-reminders-skill
 ```
 
 If you use the npm installer instead:
 
 ```bash
-npx skills add vinitu/apple-reminders-skill
+npx skills add vinitu/macos-reminders-skill
 ```
 
 ## Scope

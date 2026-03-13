@@ -1,6 +1,6 @@
 # Repo Guide
 
-This repo stores a Codex skill for Apple Reminders.app on macOS.
+This repo stores a Codex skill for macOS Reminders.app.
 
 ## Goal
 
