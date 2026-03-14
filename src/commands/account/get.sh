@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 OSA="$REPO_ROOT/src/applescripts/account"
 
-[[ $# -lt 2 ]] && { echo "Usage: $(basename "$0") <account-name> <id|name|lists_count|reminders_count>" >&2; exit 1; }
+[[ $# -ne 2 ]] && { echo "Usage: $(basename "$0") <account-name> <id|name|lists_count|reminders_count>" >&2; exit 1; }
 
 account_name="$1"
 property="${2//-/_}"

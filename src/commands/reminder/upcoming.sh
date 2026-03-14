@@ -27,7 +27,12 @@ if [[ -n "$REMINDCTL_BIN" ]]; then
   start="$(date +%Y-%m-%d)"
   end="$(date -v+${days}d +%Y-%m-%d)"
   raw=$(remindctl_all_or_list_json "$list_name")
-  normalize_reminders_json <<< "$raw" | "$JQ_BIN" --arg start "$start" --arg end "$end" '[.[] | select(.completed == false and .due_date != null and (.due_date | .[0:10]) >= $start and (.due_date | .[0:10]) <= $end)]'
+  normalize_reminders_json <<< "$raw" | "$JQ_BIN" --arg start "$start" --arg end "$end" '
+    def local_due_date:
+      try (fromdateiso8601 | strflocaltime("%Y-%m-%d"))
+      catch .[0:10];
+    [.[] | select(.completed == false and .due_date != null and (.due_date | local_due_date) >= $start and (.due_date | local_due_date) <= $end)]
+  '
   exit 0
 fi
 

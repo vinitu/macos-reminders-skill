@@ -24,7 +24,6 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --due) due_value="$2"; shift 2 ;;
     --priority) priority="$2"; shift 2 ;;
-    --json) shift ;;
     -*) echo "Unsupported flag: $1" >&2; exit 1 ;;
     *) body="$1"; shift ;;
   esac

@@ -27,8 +27,9 @@ src/commands/<entity>/<action>.sh [args...]
 
 Output rules:
 
-- Default output is human-readable text.
-- `--json` returns the normalized machine-readable contract.
+- Commands return JSON by default unless noted otherwise.
+- `src/commands/*/show.sh` opens the Reminders UI; it does not return the normalized JSON contract.
+- `--json` is not supported.
 - `--plain` is not supported.
 - `--format=plain|json` is not supported.
 
@@ -99,6 +100,8 @@ Reminder:
 - `src/commands/reminder/get-by-id.sh`
 - `src/commands/reminder/edit.sh`
 - `src/commands/reminder/edit-by-id.sh`
+- `src/commands/reminder/reschedule.sh`
+- `src/commands/reminder/reschedule-by-id.sh`
 - `src/commands/reminder/delete.sh`
 - `src/commands/reminder/delete-by-id.sh`
 - `src/commands/reminder/complete.sh`
@@ -114,16 +117,17 @@ Not published:
 ## Examples
 
 ```bash
-src/commands/account/list.sh --json
+src/commands/account/list.sh
 src/commands/account/default-list.sh
-src/commands/list/create.sh "Errands" --json
-src/commands/list/get.sh "Inbox" id --json
-src/commands/reminder/today.sh --json
-src/commands/reminder/create.sh "Inbox" "Buy milk" "2 liters" --priority high --json
-src/commands/reminder/get.sh --id "REMINDER-ID" body --json
+src/commands/list/create.sh "Errands"
+src/commands/list/get.sh "Inbox" id
+src/commands/reminder/today.sh
+src/commands/reminder/create.sh "Inbox" "Buy milk" "2 liters" --priority high
+src/commands/reminder/get.sh --id "REMINDER-ID" body
 src/commands/reminder/edit.sh --id "REMINDER-ID" body "3 liters"
+src/commands/reminder/reschedule.sh --id "REMINDER-ID" "2030-01-15"
 src/commands/reminder/complete.sh --id "REMINDER-ID"
-src/commands/reminder/delete.sh --id "REMINDER-ID" --json
+src/commands/reminder/delete.sh --id "REMINDER-ID"
 ```
 
 ## Reminder Contract

@@ -18,27 +18,6 @@ Public interface:
 - `src/commands/list/*`
 - `src/commands/reminder/*`
 
-Internal backends:
-
-- `src/applescripts/account/*`
-- `src/applescripts/list/*`
-- `src/applescripts/reminder/*`
-
-Backend map:
-
-- `account/*` -> AppleScript
-- `list/*` -> AppleScript
-- `reminder/*` -> prefer `remindctl` + jq; fallback to AppleScript when remindctl is missing
-
-## Output Rules
-
-- Default output is human-readable text.
-- `--json` returns the normalized machine-readable contract.
-- `--plain` is not supported.
-- `--format=plain|json` is not supported.
-
-If the user needs structured output, use `--json`.
-
 ## Dependencies
 
 Reminder commands prefer `remindctl` and `jq`. They first try `remindctl` from `PATH`, then `/opt/homebrew/bin/remindctl`, and use AppleScript fallback only when neither is available. Some fallback paths still use `jq` for JSON output.
@@ -51,54 +30,6 @@ remindctl status
 
 A clean macOS install does not include `remindctl`; the skill still works via AppleScript.
 
-## Public Commands
-
-Account:
-
-- `src/commands/account/list.sh`
-- `src/commands/account/get.sh`
-- `src/commands/account/search.sh`
-- `src/commands/account/show.sh`
-- `src/commands/account/default-account.sh`
-- `src/commands/account/default-list.sh`
-
-List:
-
-- `src/commands/list/list.sh`
-- `src/commands/list/create.sh`
-- `src/commands/list/show.sh`
-- `src/commands/list/edit.sh`
-- `src/commands/list/delete.sh`
-- `src/commands/list/search.sh`
-- `src/commands/list/get.sh`
-- `src/commands/list/exists.sh`
-
-Reminder:
-
-- `src/commands/reminder/list.sh`
-- `src/commands/reminder/count.sh`
-- `src/commands/reminder/today.sh`
-- `src/commands/reminder/overdue.sh`
-- `src/commands/reminder/upcoming.sh`
-- `src/commands/reminder/due-before.sh`
-- `src/commands/reminder/due-range.sh`
-- `src/commands/reminder/today-or-overdue.sh`
-- `src/commands/reminder/create.sh`
-- `src/commands/reminder/get.sh`
-- `src/commands/reminder/get-by-id.sh`
-- `src/commands/reminder/edit.sh`
-- `src/commands/reminder/edit-by-id.sh`
-- `src/commands/reminder/delete.sh`
-- `src/commands/reminder/delete-by-id.sh`
-- `src/commands/reminder/complete.sh`
-- `src/commands/reminder/move.sh`
-- `src/commands/reminder/move-by-id.sh`
-- `src/commands/reminder/exists.sh`
-- `src/commands/reminder/search.sh`
-
-Do not publish:
-
-- `src/commands/reminder/show.sh`
 
 ## Accounts
 
@@ -106,30 +37,27 @@ List all accounts:
 
 ```bash
 src/commands/account/list.sh
-src/commands/account/list.sh --json
 ```
 
 Read one account property:
 
 ```bash
 src/commands/account/get.sh "iCloud" id
-src/commands/account/get.sh "iCloud" reminders_count --json
+src/commands/account/get.sh "iCloud" reminders_count
 ```
 
 Search accounts:
 
 ```bash
 src/commands/account/search.sh exact-name "iCloud"
-src/commands/account/search.sh text "cloud" --json
+src/commands/account/search.sh text "cloud"
 ```
 
 Default account and default list:
 
 ```bash
 src/commands/account/default-account.sh
-src/commands/account/default-account.sh --json
 src/commands/account/default-list.sh
-src/commands/account/default-list.sh --json
 ```
 
 Show an account in the UI:
@@ -144,17 +72,17 @@ List all lists or lists in one account:
 
 ```bash
 src/commands/list/list.sh
-src/commands/list/list.sh "iCloud" --json
+src/commands/list/list.sh "iCloud"
 ```
 
 Create, edit, delete, exists:
 
 ```bash
 src/commands/list/create.sh "Errands"
-src/commands/list/create.sh "Errands" "#34C759" "list.bullet" --json
+src/commands/list/create.sh "Errands" "#34C759" "list.bullet"
 src/commands/list/edit.sh "Errands" name "Today"
-src/commands/list/edit.sh "Today" color "#34C759" --json
-src/commands/list/delete.sh "Today" --json
+src/commands/list/edit.sh "Today" color "#34C759"
+src/commands/list/delete.sh "Today"
 src/commands/list/exists.sh "Inbox"
 ```
 
@@ -162,8 +90,8 @@ Get and search:
 
 ```bash
 src/commands/list/get.sh "Inbox" id
-src/commands/list/get.sh "Inbox" color --json
-src/commands/list/search.sh exact-name "Inbox" --json
+src/commands/list/get.sh "Inbox" color
+src/commands/list/search.sh exact-name "Inbox"
 src/commands/list/search.sh text "Err" "iCloud"
 ```
 
@@ -182,28 +110,27 @@ List and count:
 
 ```bash
 src/commands/reminder/list.sh
-src/commands/reminder/list.sh "Inbox" --json
+src/commands/reminder/list.sh "Inbox"
 src/commands/reminder/count.sh "Inbox"
-src/commands/reminder/count.sh "Inbox" --json
 ```
 
 Date filters:
 
 ```bash
 src/commands/reminder/today.sh
-src/commands/reminder/today.sh "Inbox" --json
+src/commands/reminder/today.sh "Inbox"
 src/commands/reminder/overdue.sh "Inbox"
-src/commands/reminder/upcoming.sh 7 "Inbox" --json
-src/commands/reminder/due-before.sh "2030-01-01" "Inbox" --json
+src/commands/reminder/upcoming.sh 7 "Inbox"
+src/commands/reminder/due-before.sh "2030-01-01" "Inbox"
 src/commands/reminder/due-range.sh "2030-01-01" "2030-01-31" "Inbox"
-src/commands/reminder/today-or-overdue.sh "Inbox" --json
+src/commands/reminder/today-or-overdue.sh "Inbox"
 ```
 
 Create:
 
 ```bash
 src/commands/reminder/create.sh "Inbox" "Buy milk"
-src/commands/reminder/create.sh "Inbox" "Buy milk" "2 liters" --priority high --json
+src/commands/reminder/create.sh "Inbox" "Buy milk" "2 liters" --priority high
 src/commands/reminder/create.sh "Inbox" "Buy milk" --due "2026-03-14 10:00"
 ```
 
@@ -212,7 +139,6 @@ Read:
 ```bash
 src/commands/reminder/get.sh --id "REMINDER-ID"
 src/commands/reminder/get.sh --id "REMINDER-ID" body
-src/commands/reminder/get.sh --id "REMINDER-ID" body --json
 src/commands/reminder/get-by-id.sh "REMINDER-ID" priority
 ```
 
@@ -222,10 +148,12 @@ Edit, move, complete, delete:
 src/commands/reminder/edit.sh --id "REMINDER-ID" body "3 liters"
 src/commands/reminder/edit.sh --id "REMINDER-ID" due_date "missing"
 src/commands/reminder/edit-by-id.sh "REMINDER-ID" priority medium
+src/commands/reminder/reschedule.sh --id "REMINDER-ID" "2030-01-15"
+src/commands/reminder/reschedule-by-id.sh "REMINDER-ID" "2030-01-15 12:00"
 src/commands/reminder/move.sh --id "REMINDER-ID" "Errands"
 src/commands/reminder/move-by-id.sh "REMINDER-ID" "Errands"
 src/commands/reminder/complete.sh --id "REMINDER-ID"
-src/commands/reminder/delete.sh --id "REMINDER-ID" --json
+src/commands/reminder/delete.sh --id "REMINDER-ID"
 src/commands/reminder/delete-by-id.sh "REMINDER-ID"
 ```
 
@@ -233,13 +161,12 @@ Exists and search:
 
 ```bash
 src/commands/reminder/exists.sh --id "REMINDER-ID"
-src/commands/reminder/exists.sh --id "REMINDER-ID" --json
 src/commands/reminder/search.sh exact-name "Inbox" "Buy milk"
-src/commands/reminder/search.sh id "REMINDER-ID" --json
+src/commands/reminder/search.sh id "REMINDER-ID"
 src/commands/reminder/search.sh incomplete "Inbox"
-src/commands/reminder/search.sh priority high "Inbox" --json
+src/commands/reminder/search.sh priority high "Inbox"
 src/commands/reminder/search.sh has-due-date "Inbox"
-src/commands/reminder/search.sh text "milk" "Inbox" --json
+src/commands/reminder/search.sh text "milk" "Inbox"
 ```
 
 ## Normalized JSON Contract
@@ -296,10 +223,3 @@ These reminder features are not part of the public interface:
 - `allday_due_date`
 - `remind_me_date`
 - AppleScript reminder IDs
-
-## Validation
-
-```bash
-make compile
-make test
-```

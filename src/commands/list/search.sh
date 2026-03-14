@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 OSA="$REPO_ROOT/src/applescripts/list"
 
-[[ $# -lt 2 ]] && { echo "Usage: $(basename "$0") <exact-name|id|color|emblem|text> <query> [account-name]" >&2; exit 1; }
+[[ $# -lt 2 || $# -gt 3 ]] && { echo "Usage: $(basename "$0") <exact-name|id|color|emblem|text> <query> [account-name]" >&2; exit 1; }
 
 mode="$1"
 query="$2"

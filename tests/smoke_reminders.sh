@@ -17,6 +17,7 @@ today_completed_reminder="${prefix}_today_completed"
 overdue_reminder="${prefix}_overdue"
 upcoming_reminder="${prefix}_upcoming"
 future_reminder="${prefix}_future"
+tomorrow_early_reminder="${prefix}_tomorrow_early"
 
 date_text() {
   local day_offset="$1"
@@ -153,7 +154,7 @@ if [[ "$default_list" != "$direct_default_list" ]]; then
   exit 1
 fi
 
-account_get_json="$(src/commands/account/get.sh "$default_account" id --json)"
+account_get_json="$(src/commands/account/get.sh "$default_account" id)"
 json_assert "$account_get_json" 'payload.name === "'"$default_account"'" && payload.property === "id" && payload.value !== ""' "account get json is invalid"
 
 account_list_text="$(src/commands/account/list.sh)"
@@ -196,14 +197,14 @@ if [[ "$edited_exists" != "true" ]]; then
   exit 1
 fi
 
-list_delete_json="$(src/commands/list/delete.sh "${extra_list}_renamed" --json)"
+list_delete_json="$(src/commands/list/delete.sh "${extra_list}_renamed")"
 json_assert "$list_delete_json" 'payload.deleted === true && payload.name === "'"${extra_list}_renamed"'"' "list delete json is invalid"
 
-create_json="$(src/commands/reminder/create.sh "$source_list" "$reminder_name" "Smoke body" --priority high --json)"
+create_json="$(src/commands/reminder/create.sh "$source_list" "$reminder_name" "Smoke body" --priority high)"
 reminder_id="$(json_get "$create_json" 'payload.id')"
 json_assert "$create_json" 'payload != null && payload.id !== null && payload.name === "'"$reminder_name"'" && payload.list' "reminder create json is invalid"
 
-wrapper_create_json="$(src/commands/reminder/create.sh "$source_list" "$wrapper_reminder_name" "Wrapper body" --priority low --json)"
+wrapper_create_json="$(src/commands/reminder/create.sh "$source_list" "$wrapper_reminder_name" "Wrapper body" --priority low)"
 wrapper_id="$(json_get "$wrapper_create_json" 'payload.id')"
 
 reminder_list_json="$(src/commands/reminder/list.sh "$source_list")"
@@ -243,6 +244,15 @@ src/commands/reminder/edit-by-id.sh "$wrapper_id" priority medium >/dev/null
 wrapper_priority="$(json_get "$(src/commands/reminder/get.sh --id "$wrapper_id" priority)" 'payload.value')"
 if [[ "$wrapper_priority" != "medium" ]]; then
   printf 'smoke_reminders: reminder edit-by-id did not update priority: %s\n' "$wrapper_priority" >&2
+  exit 1
+fi
+
+rescheduled_due="$(date_text 4 12 0)"
+expected_rescheduled_date="${rescheduled_due:0:10}"
+src/commands/reminder/reschedule.sh --id "$wrapper_id" "$rescheduled_due" >/dev/null
+wrapper_due_date="$(json_get "$(src/commands/reminder/get.sh --id "$wrapper_id" due_date)" 'payload.value')"
+if [[ "${wrapper_due_date:0:10}" != "$expected_rescheduled_date" ]]; then
+  printf 'smoke_reminders: reminder reschedule did not update due date: %s\n' "$wrapper_due_date" >&2
   exit 1
 fi
 
@@ -299,27 +309,32 @@ today_start="$(date_text 0 0 0)"
 overdue_due="$(date_text -1 12 0)"
 upcoming_due="$(date_text 2 12 0)"
 future_due="$(date_text 10 12 0)"
+tomorrow_early_due="$(date_text 1 0 30)"
 range_start="$(date_text 1 0 0)"
 range_end="$(date_text 3 23 59)"
 
-today_json="$(src/commands/reminder/create.sh "$filter_list" "$today_reminder" --due "$today_due" --priority high --json)"
+today_json="$(src/commands/reminder/create.sh "$filter_list" "$today_reminder" --due "$today_due" --priority high)"
 today_id="$(json_get "$today_json" 'payload.id')"
 
-today_completed_json="$(src/commands/reminder/create.sh "$filter_list" "$today_completed_reminder" --due "$today_due" --json)"
+today_completed_json="$(src/commands/reminder/create.sh "$filter_list" "$today_completed_reminder" --due "$today_due")"
 today_completed_id="$(json_get "$today_completed_json" 'payload.id')"
 src/commands/reminder/complete.sh --id "$today_completed_id" >/dev/null
 
-overdue_json="$(src/commands/reminder/create.sh "$filter_list" "$overdue_reminder" --due "$overdue_due" --json)"
+overdue_json="$(src/commands/reminder/create.sh "$filter_list" "$overdue_reminder" --due "$overdue_due")"
 overdue_id="$(json_get "$overdue_json" 'payload.id')"
 
-upcoming_json="$(src/commands/reminder/create.sh "$filter_list" "$upcoming_reminder" --due "$upcoming_due" --priority medium --json)"
+upcoming_json="$(src/commands/reminder/create.sh "$filter_list" "$upcoming_reminder" --due "$upcoming_due" --priority medium)"
 upcoming_id="$(json_get "$upcoming_json" 'payload.id')"
 
-future_json="$(src/commands/reminder/create.sh "$filter_list" "$future_reminder" --due "$future_due" --json)"
+future_json="$(src/commands/reminder/create.sh "$filter_list" "$future_reminder" --due "$future_due")"
 future_id="$(json_get "$future_json" 'payload.id')"
+
+tomorrow_early_json="$(src/commands/reminder/create.sh "$filter_list" "$tomorrow_early_reminder" --due "$tomorrow_early_due")"
+tomorrow_early_id="$(json_get "$tomorrow_early_json" 'payload.id')"
 
 today_filter_json="$(src/commands/reminder/today.sh "$filter_list")"
 json_assert "$today_filter_json" 'payload.length === 1 && payload[0].id === "'"$today_id"'"' "today filter is unexpected"
+json_assert "$today_filter_json" '!payload.some(item => item.id === "'"$tomorrow_early_id"'")' "today filter included tomorrow boundary reminder"
 
 overdue_filter_json="$(src/commands/reminder/overdue.sh "$filter_list")"
 json_assert "$overdue_filter_json" 'payload.length === 1 && payload[0].id === "'"$overdue_id"'"' "overdue filter is unexpected"

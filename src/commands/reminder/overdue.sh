@@ -23,7 +23,12 @@ if [[ -n "$REMINDCTL_BIN" ]]; then
   [[ -n "$JQ_BIN" ]] || { echo "jq required when using remindctl" >&2; exit 1; }
   cutoff="$(date +%Y-%m-%d)"
   raw=$(remindctl_all_or_list_json "$list_name")
-  normalize_reminders_json <<< "$raw" | "$JQ_BIN" --arg cutoff "$cutoff" '[.[] | select(.completed == false and .due_date != null and (.due_date | .[0:10]) < $cutoff)]'
+  normalize_reminders_json <<< "$raw" | "$JQ_BIN" --arg cutoff "$cutoff" '
+    def local_due_date:
+      try (fromdateiso8601 | strflocaltime("%Y-%m-%d"))
+      catch .[0:10];
+    [.[] | select(.completed == false and .due_date != null and (.due_date | local_due_date) < $cutoff)]
+  '
   exit 0
 fi
 
