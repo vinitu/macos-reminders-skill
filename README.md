@@ -1,8 +1,9 @@
-# macOS Reminders AppleScript Skill
+# macOS Reminders Skill
 
 This repo stores a Codex skill for Apple Reminders.app on macOS.
 
-It documents the live AppleScript surface of Reminders.app and includes runnable scripts.
+The public interface is `src/commands`.
+`src/applescripts` stores internal AppleScript backends and dictionary-aligned coverage.
 
 ## Installation
 
@@ -16,110 +17,148 @@ Or with [skills.sh](https://skills.sh):
 skills.sh add vinitu/macos-reminders-skill
 ```
 
-## Scope
-
-- Account discovery, account lookup, and default account or list lookup.
-- Full dictionary-defined command inventory from Reminders.app plus the AppleScript verbs needed to use it.
-- CRUD for lists and reminders.
-- Search and filtering with AppleScript object specifiers.
-- Safe examples for property updates, moving reminders, UI reveal, and JSON output for read-heavy scripts.
-
-## Tested Base
-
-- macOS `26.3.1`
-- Reminders `7.0`
-
-## Repo Layout
-
-- `AGENTS.md` - repo rules for future agents.
-- `SKILL.md` - the full skill and full AppleScript reference.
-- `Makefile` - helper commands for dictionary dump, compile, and tests.
-- `scripts/account/` - account AppleScript entrypoints.
-- `scripts/list/` - list AppleScript entrypoints.
-- `scripts/reminder/` - reminder AppleScript entrypoints.
-- `tests/` - live checks for the current Reminders.app behavior.
-
-## Command Surface
-
-Account commands:
-
-- `scripts/account/list.applescript`
-- `scripts/account/get.applescript`
-- `scripts/account/search.applescript`
-- `scripts/account/show.applescript`
-- `scripts/account/default-account.applescript`
-- `scripts/account/default-list.applescript`
-
-List commands:
-
-- `scripts/list/list.applescript`
-- `scripts/list/create.applescript`
-- `scripts/list/show.applescript`
-- `scripts/list/edit.applescript`
-- `scripts/list/delete.applescript`
-- `scripts/list/search.applescript`
-- `scripts/list/get.applescript`
-- `scripts/list/exists.applescript`
-
-Reminder commands:
-
-- `scripts/reminder/list.applescript`
-- `scripts/reminder/create.applescript`
-- `scripts/reminder/show.applescript`
-- `scripts/reminder/edit.applescript`
-- `scripts/reminder/edit-by-id.applescript`
-- `scripts/reminder/delete.applescript`
-- `scripts/reminder/delete-by-id.applescript`
-- `scripts/reminder/search.applescript`
-- `scripts/reminder/get.applescript`
-- `scripts/reminder/get-by-id.applescript`
-- `scripts/reminder/exists.applescript`
-- `scripts/reminder/count.applescript`
-- `scripts/reminder/today.applescript`
-- `scripts/reminder/overdue.applescript`
-- `scripts/reminder/upcoming.applescript`
-- `scripts/reminder/due-before.applescript`
-- `scripts/reminder/due-range.applescript`
-- `scripts/reminder/today-or-overdue.applescript`
-- `scripts/reminder/complete.applescript`
-- `scripts/reminder/move.applescript`
-- `scripts/reminder/move-by-id.applescript`
-
-Dictionary-level notes:
-
-- Reminders suite: `show`
-- Standard suite: `open`, `close`, `save`, `print`, `quit`, `count`, `delete`, `duplicate`, `exists`, `make`, `move`
-- AppleScript language verbs used with the dictionary: `get`, `set`, `tell`, `whose`
-
-See `SKILL.md` for the full matrix, notes, and examples.
-
-## How To Use
+## Public Interface
 
 Run skill actions with:
 
 ```bash
-osascript scripts/<entity>/<action>.applescript [args...]
+src/commands/<entity>/<action>.sh [args...]
 ```
 
-Examples:
+Output rules:
+
+- Default output is human-readable text.
+- `--json` returns the normalized machine-readable contract.
+- `--plain` is not supported.
+- `--format=plain|json` is not supported.
+
+## Backend Map
+
+- `src/commands/account/*` -> AppleScript in `src/applescripts/account/*`
+- `src/commands/list/*` -> AppleScript in `src/applescripts/list/*`
+- `src/commands/reminder/*` -> prefer `remindctl` + jq; fallback to AppleScript when remindctl is missing
+
+`src/applescripts` is internal. Do not call it directly from the skill instructions.
+
+## Dependencies
+
+- macOS Reminders.app
+- Reminder commands: prefer `remindctl` and `jq`; work without remindctl via AppleScript fallback (some fallbacks still use jq for JSON)
+
+Check remindctl access with:
 
 ```bash
-osascript scripts/account/list.applescript
-osascript scripts/account/get.applescript "iCloud" id
-osascript scripts/account/default-list.applescript
-osascript scripts/list/list.applescript
-osascript scripts/list/list.applescript "iCloud" --format=json
-osascript scripts/list/create.applescript "Errands"
-osascript scripts/reminder/create.applescript "Inbox" "Buy milk" "2 liters"
-osascript scripts/reminder/count.applescript "Inbox" --format=json
-osascript scripts/reminder/search.applescript incomplete "Inbox"
+remindctl status
 ```
 
-For the full command set and arguments, use `SKILL.md`.
+A clean macOS install does not include `remindctl`; the skill still works via AppleScript.
 
-## Important Limits
+## Repo Layout
 
-- `show` opens or focuses the UI. Do not use account, list, or reminder `show` scripts in headless smoke tests.
-- `duplicate` is declared by the standard suite, but live tests on Reminders `7.0` failed for reminders with AppleScript error `-1717`.
-- `open`, `close`, `save`, `print`, and `quit` are standard app or window actions. They are documented by the dictionary, but this repo does not publish wrapper scripts for them.
-- The dictionary says a reminder `container` can be a reminder, but the class does not expose `reminders` as an element of `reminder`, so subtask creation is not available as a published AppleScript operation.
+- `AGENTS.md` - repo rules for future agents.
+- `SKILL.md` - the main skill workflow and command reference.
+- `Makefile` - helper commands for dictionary dump, compile, and tests.
+- `src/commands/` - public shell command interface.
+- `src/applescripts/` - internal AppleScript backends in `<entity>/<action>.applescript` format.
+- `tests/` - live integration checks.
+
+## Command Surface
+
+Account:
+
+- `src/commands/account/list.sh`
+- `src/commands/account/get.sh`
+- `src/commands/account/search.sh`
+- `src/commands/account/show.sh`
+- `src/commands/account/default-account.sh`
+- `src/commands/account/default-list.sh`
+
+List:
+
+- `src/commands/list/list.sh`
+- `src/commands/list/create.sh`
+- `src/commands/list/show.sh`
+- `src/commands/list/edit.sh`
+- `src/commands/list/delete.sh`
+- `src/commands/list/search.sh`
+- `src/commands/list/get.sh`
+- `src/commands/list/exists.sh`
+
+Reminder:
+
+- `src/commands/reminder/list.sh`
+- `src/commands/reminder/count.sh`
+- `src/commands/reminder/today.sh`
+- `src/commands/reminder/overdue.sh`
+- `src/commands/reminder/upcoming.sh`
+- `src/commands/reminder/due-before.sh`
+- `src/commands/reminder/due-range.sh`
+- `src/commands/reminder/today-or-overdue.sh`
+- `src/commands/reminder/create.sh`
+- `src/commands/reminder/get.sh`
+- `src/commands/reminder/get-by-id.sh`
+- `src/commands/reminder/edit.sh`
+- `src/commands/reminder/edit-by-id.sh`
+- `src/commands/reminder/delete.sh`
+- `src/commands/reminder/delete-by-id.sh`
+- `src/commands/reminder/complete.sh`
+- `src/commands/reminder/move.sh`
+- `src/commands/reminder/move-by-id.sh`
+- `src/commands/reminder/exists.sh`
+- `src/commands/reminder/search.sh`
+
+Not published:
+
+- `src/commands/reminder/show.sh`
+
+## Examples
+
+```bash
+src/commands/account/list.sh --json
+src/commands/account/default-list.sh
+src/commands/list/create.sh "Errands" --json
+src/commands/list/get.sh "Inbox" id --json
+src/commands/reminder/today.sh --json
+src/commands/reminder/create.sh "Inbox" "Buy milk" "2 liters" --priority high --json
+src/commands/reminder/get.sh --id "REMINDER-ID" body --json
+src/commands/reminder/edit.sh --id "REMINDER-ID" body "3 liters"
+src/commands/reminder/complete.sh --id "REMINDER-ID"
+src/commands/reminder/delete.sh --id "REMINDER-ID" --json
+```
+
+## Reminder Contract
+
+- Public reminder identity is the `remindctl` reminder ID or unique prefix.
+- Canonical reminder read and write commands use `--id`.
+- Public reminder fields:
+  - `id`
+  - `name`
+  - `list`
+  - `body`
+  - `completed`
+  - `priority`
+  - `due_date`
+- Public priority values:
+  - `none`
+  - `low`
+  - `medium`
+  - `high`
+
+These reminder features are not part of the public interface:
+
+- `show`
+- `flagged`
+- `container`
+- `creation_date`
+- `modification_date`
+- `completion_date`
+- `allday_due_date`
+- `remind_me_date`
+- AppleScript reminder IDs
+
+## Validation
+
+```bash
+make compile
+make test
+```

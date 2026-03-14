@@ -1,129 +1,257 @@
 ---
 name: macos-reminders
-description: Use this skill when you need to control Apple Reminders.app on macOS with AppleScript. Covers list and reminder CRUD, property updates, search, and UI reveal.
+description: Use this skill when you need to control Apple Reminders.app on macOS. The public interface is src/commands. Account and list commands use AppleScript backends. Reminder data commands use remindctl.
 ---
 
-# macOS Reminders AppleScript
+# macOS Reminders
 
-Use this skill when the task is about Apple Reminders.app on macOS and AppleScript is the required interface.
-
-This guide only covers working with Reminders.
+Use this skill when the task is about Apple Reminders.app on macOS.
 
 ## Main Rule
 
-Do not put inline AppleScript in the answer when this repo already has a script for the action.
-Run the scripts in `scripts/account`, `scripts/list`, and `scripts/reminder`.
+Use only the commands in `src/commands`.
+Do not call `src/applescripts` directly in the answer.
 
-## Script Layout
+Public interface:
 
-- `scripts/account/list.applescript`
-- `scripts/list/list.applescript`
-- `scripts/list/create.applescript`
-- `scripts/list/show.applescript`
-- `scripts/list/edit.applescript`
-- `scripts/list/delete.applescript`
-- `scripts/list/search.applescript`
-- `scripts/list/get.applescript`
-- `scripts/list/exists.applescript`
-- `scripts/reminder/list.applescript`
-- `scripts/reminder/create.applescript`
-- `scripts/reminder/show.applescript`
-- `scripts/reminder/edit.applescript`
-- `scripts/reminder/edit-by-id.applescript`
-- `scripts/reminder/delete.applescript`
-- `scripts/reminder/delete-by-id.applescript`
-- `scripts/reminder/search.applescript`
-- `scripts/reminder/get.applescript`
-- `scripts/reminder/get-by-id.applescript`
-- `scripts/reminder/exists.applescript`
-- `scripts/reminder/count.applescript`
-- `scripts/reminder/today.applescript`
-- `scripts/reminder/overdue.applescript`
-- `scripts/reminder/upcoming.applescript`
-- `scripts/reminder/due-before.applescript`
-- `scripts/reminder/due-range.applescript`
-- `scripts/reminder/today-or-overdue.applescript`
-- `scripts/reminder/complete.applescript`
-- `scripts/reminder/move.applescript`
-- `scripts/reminder/move-by-id.applescript`
+- `src/commands/account/*`
+- `src/commands/list/*`
+- `src/commands/reminder/*`
+
+Internal backends:
+
+- `src/applescripts/account/*`
+- `src/applescripts/list/*`
+- `src/applescripts/reminder/*`
+
+Backend map:
+
+- `account/*` -> AppleScript
+- `list/*` -> AppleScript
+- `reminder/*` -> prefer `remindctl` + jq; fallback to AppleScript when remindctl is missing
+
+## Output Rules
+
+- Default output is human-readable text.
+- `--json` returns the normalized machine-readable contract.
+- `--plain` is not supported.
+- `--format=plain|json` is not supported.
+
+If the user needs structured output, use `--json`.
+
+## Dependencies
+
+Reminder commands prefer `remindctl` and `jq`. When `remindctl` is not available they use AppleScript fallback (no extra install). Some fallback paths still use `jq` for JSON output.
+
+Check remindctl access with:
+
+```bash
+remindctl status
+```
+
+A clean macOS install does not include `remindctl`; the skill still works via AppleScript.
+
+## Public Commands
+
+Account:
+
+- `src/commands/account/list.sh`
+- `src/commands/account/get.sh`
+- `src/commands/account/search.sh`
+- `src/commands/account/show.sh`
+- `src/commands/account/default-account.sh`
+- `src/commands/account/default-list.sh`
+
+List:
+
+- `src/commands/list/list.sh`
+- `src/commands/list/create.sh`
+- `src/commands/list/show.sh`
+- `src/commands/list/edit.sh`
+- `src/commands/list/delete.sh`
+- `src/commands/list/search.sh`
+- `src/commands/list/get.sh`
+- `src/commands/list/exists.sh`
+
+Reminder:
+
+- `src/commands/reminder/list.sh`
+- `src/commands/reminder/count.sh`
+- `src/commands/reminder/today.sh`
+- `src/commands/reminder/overdue.sh`
+- `src/commands/reminder/upcoming.sh`
+- `src/commands/reminder/due-before.sh`
+- `src/commands/reminder/due-range.sh`
+- `src/commands/reminder/today-or-overdue.sh`
+- `src/commands/reminder/create.sh`
+- `src/commands/reminder/get.sh`
+- `src/commands/reminder/get-by-id.sh`
+- `src/commands/reminder/edit.sh`
+- `src/commands/reminder/edit-by-id.sh`
+- `src/commands/reminder/delete.sh`
+- `src/commands/reminder/delete-by-id.sh`
+- `src/commands/reminder/complete.sh`
+- `src/commands/reminder/move.sh`
+- `src/commands/reminder/move-by-id.sh`
+- `src/commands/reminder/exists.sh`
+- `src/commands/reminder/search.sh`
+
+Do not publish:
+
+- `src/commands/reminder/show.sh`
 
 ## Accounts
 
 List all accounts:
 
 ```bash
-osascript scripts/account/list.applescript
+src/commands/account/list.sh
+src/commands/account/list.sh --json
+```
+
+Read one account property:
+
+```bash
+src/commands/account/get.sh "iCloud" id
+src/commands/account/get.sh "iCloud" reminders_count --json
+```
+
+Search accounts:
+
+```bash
+src/commands/account/search.sh exact-name "iCloud"
+src/commands/account/search.sh text "cloud" --json
+```
+
+Default account and default list:
+
+```bash
+src/commands/account/default-account.sh
+src/commands/account/default-account.sh --json
+src/commands/account/default-list.sh
+src/commands/account/default-list.sh --json
+```
+
+Show an account in the UI:
+
+```bash
+src/commands/account/show.sh "iCloud"
 ```
 
 ## Lists
 
-List all lists:
+List all lists or lists in one account:
 
 ```bash
-osascript scripts/list/list.applescript
+src/commands/list/list.sh
+src/commands/list/list.sh "iCloud" --json
 ```
 
-List lists in one account:
+Create, edit, delete, exists:
 
 ```bash
-osascript scripts/list/list.applescript "iCloud"
+src/commands/list/create.sh "Errands"
+src/commands/list/create.sh "Errands" "#34C759" "list.bullet" --json
+src/commands/list/edit.sh "Errands" name "Today"
+src/commands/list/edit.sh "Today" color "#34C759" --json
+src/commands/list/delete.sh "Today" --json
+src/commands/list/exists.sh "Inbox"
 ```
 
-Create a list:
+Get and search:
 
 ```bash
-osascript scripts/list/create.applescript "Errands"
-```
-
-Create a list with color and emblem:
-
-```bash
-osascript scripts/list/create.applescript "Errands" "#34C759" "list.bullet"
+src/commands/list/get.sh "Inbox" id
+src/commands/list/get.sh "Inbox" color --json
+src/commands/list/search.sh exact-name "Inbox" --json
+src/commands/list/search.sh text "Err" "iCloud"
 ```
 
 Show a list in the UI:
 
 ```bash
-osascript scripts/list/show.applescript "Inbox"
+src/commands/list/show.sh "Inbox"
 ```
 
-Rename a list:
+## Reminders
+
+Canonical reminder identity is the `remindctl` reminder ID or a unique prefix.
+Prefer `--id` for reminder read and write commands.
+
+List and count:
 
 ```bash
-osascript scripts/list/edit.applescript "Inbox" name "Today"
+src/commands/reminder/list.sh
+src/commands/reminder/list.sh "Inbox" --json
+src/commands/reminder/count.sh "Inbox"
+src/commands/reminder/count.sh "Inbox" --json
 ```
 
-Set list color:
+Date filters:
 
 ```bash
-osascript scripts/list/edit.applescript "Today" color "#34C759"
+src/commands/reminder/today.sh
+src/commands/reminder/today.sh "Inbox" --json
+src/commands/reminder/overdue.sh "Inbox"
+src/commands/reminder/upcoming.sh 7 "Inbox" --json
+src/commands/reminder/due-before.sh "2030-01-01" "Inbox" --json
+src/commands/reminder/due-range.sh "2030-01-01" "2030-01-31" "Inbox"
+src/commands/reminder/today-or-overdue.sh "Inbox" --json
 ```
 
-Set list emblem:
+Create:
 
 ```bash
-osascript scripts/list/edit.applescript "Today" emblem "list.bullet"
+src/commands/reminder/create.sh "Inbox" "Buy milk"
+src/commands/reminder/create.sh "Inbox" "Buy milk" "2 liters" --priority high --json
+src/commands/reminder/create.sh "Inbox" "Buy milk" --due "2026-03-14 10:00"
 ```
 
-Delete a list:
+Read:
 
 ```bash
-osascript scripts/list/delete.applescript "Errands"
+src/commands/reminder/get.sh --id "REMINDER-ID"
+src/commands/reminder/get.sh --id "REMINDER-ID" body
+src/commands/reminder/get.sh --id "REMINDER-ID" body --json
+src/commands/reminder/get-by-id.sh "REMINDER-ID" priority
 ```
 
-Check that a list exists:
+Edit, move, complete, delete:
 
 ```bash
-osascript scripts/list/exists.applescript "Inbox"
+src/commands/reminder/edit.sh --id "REMINDER-ID" body "3 liters"
+src/commands/reminder/edit.sh --id "REMINDER-ID" due_date "missing"
+src/commands/reminder/edit-by-id.sh "REMINDER-ID" priority medium
+src/commands/reminder/move.sh --id "REMINDER-ID" "Errands"
+src/commands/reminder/move-by-id.sh "REMINDER-ID" "Errands"
+src/commands/reminder/complete.sh --id "REMINDER-ID"
+src/commands/reminder/delete.sh --id "REMINDER-ID" --json
+src/commands/reminder/delete-by-id.sh "REMINDER-ID"
 ```
 
-Read a list property:
+Exists and search:
 
 ```bash
-osascript scripts/list/get.applescript "Inbox" id
+src/commands/reminder/exists.sh --id "REMINDER-ID"
+src/commands/reminder/exists.sh --id "REMINDER-ID" --json
+src/commands/reminder/search.sh exact-name "Inbox" "Buy milk"
+src/commands/reminder/search.sh id "REMINDER-ID" --json
+src/commands/reminder/search.sh incomplete "Inbox"
+src/commands/reminder/search.sh priority high "Inbox" --json
+src/commands/reminder/search.sh has-due-date "Inbox"
+src/commands/reminder/search.sh text "milk" "Inbox" --json
 ```
 
-Supported list properties:
+## Normalized JSON Contract
+
+Account object:
+
+- `id`
+- `name`
+- `lists_count`
+- `reminders_count`
+
+List object:
 
 - `id`
 - `name`
@@ -131,313 +259,47 @@ Supported list properties:
 - `color`
 - `emblem`
 
-Search lists by exact name:
+Reminder object:
 
-```bash
-osascript scripts/list/search.applescript exact-name "Inbox"
-```
-
-Search lists by id:
-
-```bash
-osascript scripts/list/search.applescript id "x-apple-reminder://LIST-ID"
-```
-
-Search lists by color:
-
-```bash
-osascript scripts/list/search.applescript color "#34C759"
-```
-
-Search lists by emblem:
-
-```bash
-osascript scripts/list/search.applescript emblem "list.bullet"
-```
-
-Search lists by text in the list name:
-
-```bash
-osascript scripts/list/search.applescript text "Err"
-```
-
-Search lists with JSON output:
-
-```bash
-osascript scripts/list/search.applescript text "Err" --format=json
-```
-
-## Reminders
-
-List all reminders:
-
-```bash
-osascript scripts/reminder/list.applescript
-```
-
-List reminders in one list:
-
-```bash
-osascript scripts/reminder/list.applescript "Inbox"
-```
-
-Count reminders in one list:
-
-```bash
-osascript scripts/reminder/count.applescript "Inbox"
-```
-
-List reminders due today in all lists:
-
-```bash
-osascript scripts/reminder/today.applescript
-```
-
-List reminders due today in one list:
-
-```bash
-osascript scripts/reminder/today.applescript "Inbox"
-```
-
-List overdue reminders in all lists:
-
-```bash
-osascript scripts/reminder/overdue.applescript
-```
-
-List overdue reminders in one list:
-
-```bash
-osascript scripts/reminder/overdue.applescript "Inbox"
-```
-
-List reminders due in the next 7 days:
-
-```bash
-osascript scripts/reminder/upcoming.applescript 7
-```
-
-List reminders due before a date:
-
-```bash
-osascript scripts/reminder/due-before.applescript "1/1/2030"
-```
-
-List reminders due in a date range:
-
-```bash
-osascript scripts/reminder/due-range.applescript "1/1/2020" "1/1/2030"
-```
-
-List focus reminders (today + overdue):
-
-```bash
-osascript scripts/reminder/today-or-overdue.applescript
-```
-
-Create a reminder:
-
-```bash
-osascript scripts/reminder/create.applescript "Inbox" "Buy milk" "2 liters"
-```
-
-Show a reminder in the UI:
-
-```bash
-osascript scripts/reminder/show.applescript "Inbox" "Buy milk"
-```
-
-Edit one reminder property:
-
-```bash
-osascript scripts/reminder/edit.applescript "Inbox" "Buy milk" body "3 liters"
-```
-
-Set reminder priority:
-
-```bash
-osascript scripts/reminder/edit.applescript "Inbox" "Buy milk" priority 1
-```
-
-Set reminder flagged:
-
-```bash
-osascript scripts/reminder/edit.applescript "Inbox" "Buy milk" flagged true
-```
-
-Set reminder due date:
-
-```bash
-osascript scripts/reminder/edit.applescript "Inbox" "Buy milk" due_date "March 13, 2026 10:00"
-```
-
-Clear reminder due date:
-
-```bash
-osascript scripts/reminder/edit.applescript "Inbox" "Buy milk" due_date missing
-```
-
-Delete a reminder:
-
-```bash
-osascript scripts/reminder/delete.applescript "Inbox" "Buy milk"
-```
-
-Check that a reminder exists:
-
-```bash
-osascript scripts/reminder/exists.applescript "Inbox" "Buy milk"
-```
-
-Read a reminder property:
-
-```bash
-osascript scripts/reminder/get.applescript "Inbox" "Buy milk" body
-```
-
-Read a reminder property by id:
-
-```bash
-osascript scripts/reminder/get-by-id.applescript "Inbox" "x-apple-reminder://1234-ABCD" body
-```
-
-Edit a reminder by id:
-
-```bash
-osascript scripts/reminder/edit-by-id.applescript "Inbox" "x-apple-reminder://1234-ABCD" priority 1
-```
-
-Delete a reminder by id:
-
-```bash
-osascript scripts/reminder/delete-by-id.applescript "Inbox" "x-apple-reminder://1234-ABCD"
-```
-
-Supported reminder properties:
-
-- `name`
 - `id`
+- `name`
+- `list`
+- `body`
+- `completed`
+- `priority`
+- `due_date`
+
+Reminder priority values:
+
+- `none`
+- `low`
+- `medium`
+- `high`
+
+Scalar envelopes:
+
+- `count`: `{"count": N, "list": "..."}`
+- `exists`: `{"exists": true|false, "id": "..."}`
+- property read: `{"id": "...", "property": "...", "value": ...}`
+- delete: `{"deleted": true, "id": "..."}`
+
+## Public Reminder Limits
+
+These reminder features are not part of the public interface:
+
+- `show`
+- `flagged`
 - `container`
 - `creation_date`
 - `modification_date`
-- `body`
-- `completed`
 - `completion_date`
-- `due_date`
 - `allday_due_date`
 - `remind_me_date`
-- `priority`
-- `flagged`
+- AppleScript reminder IDs
 
-Complete a reminder:
-
-```bash
-osascript scripts/reminder/complete.applescript "Inbox" "Buy milk"
-```
-
-Move a reminder to another list:
+## Validation
 
 ```bash
-osascript scripts/reminder/move.applescript "Inbox" "Buy milk" "Errands"
+make compile
+make test
 ```
-
-Move a reminder to another list by id:
-
-```bash
-osascript scripts/reminder/move-by-id.applescript "Inbox" "x-apple-reminder://1234-ABCD" "Errands"
-```
-
-Any reminder query script can return JSON:
-
-```bash
-osascript scripts/reminder/today.applescript --format=json
-osascript scripts/reminder/overdue.applescript "Inbox" --format=json
-osascript scripts/reminder/search.applescript text "milk" "Inbox" --format=json
-```
-
-## Search
-
-There is no native AppleScript command named `search` in Reminders.
-Search means lookup by name or id, filtering with `whose`, or manual text scan.
-Search in this skill trims surrounding spaces and matches case-insensitive text.
-
-Find one reminder by exact name inside one list:
-
-```bash
-osascript scripts/reminder/search.applescript exact-name "Inbox" "Buy milk"
-```
-
-Find one reminder by id:
-
-```bash
-osascript scripts/reminder/search.applescript id "x-apple-reminder://1234-ABCD"
-```
-
-Find incomplete reminders in all lists:
-
-```bash
-osascript scripts/reminder/search.applescript incomplete
-```
-
-Find incomplete reminders in one list:
-
-```bash
-osascript scripts/reminder/search.applescript incomplete "Inbox"
-```
-
-Find flagged reminders:
-
-```bash
-osascript scripts/reminder/search.applescript flagged
-```
-
-Find reminders by priority:
-
-```bash
-osascript scripts/reminder/search.applescript priority 1 "Inbox"
-```
-
-Find reminders that have a due date:
-
-```bash
-osascript scripts/reminder/search.applescript has-due-date "Inbox"
-```
-
-Find reminders by free text in title or notes:
-
-```bash
-osascript scripts/reminder/search.applescript text "milk" "Inbox"
-```
-
-Find reminders by text with JSON output:
-
-```bash
-osascript scripts/reminder/search.applescript text "  MILK  " "Inbox" --format=json
-```
-
-## AppleScript Command Map
-
-These are the published Reminders AppleScript actions and the script to use for each one.
-
-- `show`: `scripts/list/show.applescript`, `scripts/reminder/show.applescript`
-- `count`: `scripts/reminder/count.applescript`
-- `delete`: `scripts/list/delete.applescript`, `scripts/reminder/delete.applescript`
-- `exists`: `scripts/list/exists.applescript`, `scripts/reminder/exists.applescript`
-- `make`: `scripts/list/create.applescript`, `scripts/reminder/create.applescript`
-- `move`: `scripts/reminder/move.applescript`
-- `get`: `scripts/list/get.applescript`, `scripts/reminder/get.applescript`
-- `set`: `scripts/list/edit.applescript`, `scripts/reminder/edit.applescript`
-- `id-scoped reminder actions`: `scripts/reminder/get-by-id.applescript`, `scripts/reminder/edit-by-id.applescript`, `scripts/reminder/delete-by-id.applescript`, `scripts/reminder/move-by-id.applescript`
-- `date filters`: `scripts/reminder/today.applescript`, `scripts/reminder/overdue.applescript`, `scripts/reminder/upcoming.applescript`, `scripts/reminder/due-before.applescript`, `scripts/reminder/due-range.applescript`, `scripts/reminder/today-or-overdue.applescript`
-- `output format`: query and search scripts accept `--format=plain|json`
-- `duplicate`: exposed by the app, but unreliable for reminders. Do not use it as a normal workflow.
-- `open`, `close`, `save`, `print`, `quit`: standard app and window actions. They are not part of reminder data work and are not wrapped here.
-
-## Limits
-
-- `show-*` opens the Reminders UI.
-- `duplicate` can fail with error `-1717`.
-- Date setters accept a macOS date string that AppleScript can parse on this Mac, or `missing` to clear the field.
-- Date filter scripts (`due-before`, `due-range`) also use macOS date parsing on this Mac.
-- There is no published AppleScript API for tags, smart lists, recurrence rules, attachments, shared assignees, URLs, or section grouping.
-- A reminder can report a `container` of type `reminder`, but the dictionary does not expose `reminders of reminder`, so subtask creation is not available as a normal operation.
