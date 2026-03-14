@@ -1,6 +1,9 @@
 # Repo Guide
 
-This repo stores a Codex skill for macOS Reminders.app.
+This repo stores an AI agent skill for macOS Reminders.app.
+
+Installed global skill directory: `~/.agents/skills/macos-reminders`.
+`skills check` and `skills update` may refer to this skill by upstream package name `apple-reminders` from `vinitu/apple-reminders-skill`.
 
 ## Where to start
 

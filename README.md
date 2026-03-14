@@ -1,6 +1,6 @@
 # macOS Reminders Skill
 
-This repo stores a Codex skill for Apple Reminders.app on macOS.
+This repo stores an AI agent skill for Apple Reminders.app on macOS.
 
 The public interface is `src/commands`.
 `src/applescripts` stores internal AppleScript backends and dictionary-aligned coverage.
@@ -8,14 +8,17 @@ The public interface is `src/commands`.
 ## Installation
 
 ```bash
-npx skills add vinitu/macos-reminders-skill
+npx skills add vinitu/apple-reminders-skill
 ```
 
 Or with [skills.sh](https://skills.sh):
 
 ```bash
-skills.sh add vinitu/macos-reminders-skill
+skills.sh add vinitu/apple-reminders-skill
 ```
+
+The installed global skill directory is usually `~/.agents/skills/macos-reminders`.
+`skills check` and `skills update` may refer to the upstream package name `apple-reminders`.
 
 ## Public Interface
 

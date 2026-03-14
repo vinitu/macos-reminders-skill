@@ -7,6 +7,9 @@ description: Use this skill when you need to control Apple Reminders.app on macO
 
 Use this skill when the task is about Apple Reminders.app on macOS.
 
+Installed global skill directory: `~/.agents/skills/macos-reminders`.
+`skills check` and `skills update` may refer to this skill by upstream package name `apple-reminders` from `vinitu/apple-reminders-skill`.
+
 ## Main Rule
 
 Use only the commands in `src/commands`.
