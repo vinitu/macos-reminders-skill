@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Output: always JSON (array of overdue reminders).
+# Requires: remindctl, jq. Without remindctl prints "not implemented yet" and exits 1.
 # Example:
 # [
 #   {
@@ -14,20 +15,25 @@
 # ]
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-[[ $# -gt 1 ]] && { echo "Usage: $(basename "$0") [list-name]" >&2; exit 1; }
 list_name="${1:-}"
+cutoff="$(date +%Y-%m-%d)"
 
-if command -v remindctl >/dev/null 2>&1; then
-  if [[ -n "$list_name" ]]; then
-    raw=$(remindctl list "$list_name" --json --no-color --no-input)
-  else
-    raw=$(remindctl show all --json --no-color --no-input)
-  fi
-  printf '%s' "$raw" | jq --arg cutoff "$(date +%Y-%m-%d)" '
-    [.[] | select(.isCompleted == false and .dueDate != null and (.dueDate | .[0:10]) < $cutoff) |
-     {id, name: .title, list: .listName, body: (if .notes == "" then null else .notes end), completed: .isCompleted, priority: .priority, due_date: .dueDate}]
-  '
-else
-  exec /usr/bin/osascript "$REPO_ROOT/src/applescripts/reminder/overdue.applescript" ${list_name:+$list_name} --format=json
+if ! command -v remindctl >/dev/null 2>&1; then
+  echo "not implemented yet" >&2
+  exit 1
 fi
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq required when using remindctl" >&2
+  exit 1
+fi
+
+if [[ -n "$list_name" ]]; then
+  raw=$(remindctl list "$list_name" --json --no-color --no-input) || { echo "remindctl failed" >&2; exit 1; }
+else
+  raw=$(remindctl show all --json --no-color --no-input) || { echo "remindctl failed" >&2; exit 1; }
+fi
+
+printf '%s' "$raw" | jq --arg cutoff "$cutoff" '
+  [.[] | select(.isCompleted == false and .dueDate != null and (.dueDate | .[0:10]) < $cutoff) |
+   {id, name: .title, list: .listName, body: (if .notes == "" or .notes == null then null else .notes end), completed: .isCompleted, priority: (if .priority == null then "none" elif .priority == 0 then "none" elif .priority == 1 then "low" elif .priority == 5 then "medium" elif .priority == 9 then "high" else "none" end), due_date: .dueDate}]
+'
