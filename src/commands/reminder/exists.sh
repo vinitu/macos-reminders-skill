@@ -16,34 +16,31 @@ set -euo pipefail
 [[ $# -lt 2 || "$1" != "--id" ]] && { echo "Usage: $(basename "$0") --id <id>" >&2; exit 1; }
 [[ $# -gt 2 ]] && { echo "Usage: $(basename "$0") --id <id>" >&2; exit 1; }
 id_arg="$2"
+# shellcheck source=src/commands/reminder/_lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
-if command -v remindctl >/dev/null 2>&1; then
-  if ! command -v jq >/dev/null 2>&1; then
-    echo "jq required when using remindctl" >&2
-    exit 1
-  fi
-  raw=$(remindctl show all --json --no-color --no-input) || { echo "remindctl failed" >&2; exit 1; }
-  matches=$(printf '%s' "$raw" | jq -c --arg id "$id_arg" '[.[] | select((.id | ascii_downcase) | startswith(($id | ascii_downcase)))]')
-  n=$(printf '%s' "$matches" | jq 'length')
-  if [[ "$n" -gt 1 ]]; then
+if [[ -n "$REMINDCTL_BIN" ]]; then
+  [[ -n "$JQ_BIN" ]] || { echo "jq required when using remindctl" >&2; exit 1; }
+  raw=$(remindctl_show_all_json)
+  matches=$(find_reminder_matches_json "$id_arg" <<< "$raw")
+  count=$(printf '%s' "$matches" | "$JQ_BIN" 'length')
+  if [[ "$count" -gt 1 ]]; then
     echo "Reminder id is ambiguous: $id_arg" >&2
     exit 1
   fi
-  if [[ "$n" -eq 1 ]]; then
-    full_id=$(printf '%s' "$matches" | jq -r '.[0].id')
-    jq -n --arg id "$full_id" '{exists: true, id: $id}'
+  if [[ "$count" -eq 1 ]]; then
+    full_id=$(printf '%s' "$matches" | "$JQ_BIN" -r '.[0].id')
+    "$JQ_BIN" -n --arg id "$full_id" '{exists: true, id: $id}'
   else
-    jq -n '{exists: false, id: null}'
+    "$JQ_BIN" -n '{exists: false, id: null}'
   fi
   exit 0
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-out=$(/usr/bin/osascript "$REPO_ROOT/src/applescripts/reminder/get-reminder-by-id.applescript" "$id_arg" 2>/dev/null) || true
-if [[ -n "$out" ]] && command -v jq >/dev/null 2>&1 && printf '%s' "$out" | jq -e '.id' >/dev/null 2>&1; then
-  full_id=$(printf '%s' "$out" | jq -r '.id')
-  jq -n --arg id "$full_id" '{exists: true, id: $id}'
+out=$(run_reminder_applescript get-reminder-by-id.applescript "$id_arg" 2>/dev/null) || true
+if [[ -n "$out" ]] && [[ -n "$JQ_BIN" ]] && printf '%s' "$out" | "$JQ_BIN" -e '.id' >/dev/null 2>&1; then
+  full_id=$(printf '%s' "$out" | "$JQ_BIN" -r '.id')
+  "$JQ_BIN" -n --arg id "$full_id" '{exists: true, id: $id}'
 else
-  jq -n '{exists: false, id: null}'
+  printf '{"exists":false,"id":null}\n'
 fi

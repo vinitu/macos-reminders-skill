@@ -18,13 +18,11 @@ set -euo pipefail
 [[ $# -lt 1 ]] && { echo "Usage: $(basename "$0") <exact-name|id|incomplete|priority|has-due-date|text> [args...]" >&2; exit 1; }
 mode="$1"
 shift
+# shellcheck source=src/commands/reminder/_lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
-if command -v remindctl >/dev/null 2>&1; then
-  if ! command -v jq >/dev/null 2>&1; then
-    echo "jq required when using remindctl" >&2
-    exit 1
-  fi
-  REMINDER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "$REMINDCTL_BIN" ]]; then
+  [[ -n "$JQ_BIN" ]] || { echo "jq required when using remindctl" >&2; exit 1; }
   list_name=""
   case "$mode" in
       exact-name) [[ $# -lt 2 ]] && { echo "Usage: $(basename "$0") exact-name <list-name> <reminder-name>" >&2; exit 1; }; list_name="$1"; exact_title="$2"; shift 2 ;;
@@ -36,25 +34,18 @@ if command -v remindctl >/dev/null 2>&1; then
     *) echo "Unsupported search mode: $mode" >&2; exit 1 ;;
   esac
 
-  if [[ -n "$list_name" ]]; then
-    raw=$(remindctl list "$list_name" --json --no-color --no-input) || { echo "remindctl failed" >&2; exit 1; }
-  else
-    raw=$(remindctl show all --json --no-color --no-input) || { echo "remindctl failed" >&2; exit 1; }
-  fi
+  raw=$(remindctl_all_or_list_json "$list_name")
 
   case "$mode" in
     exact-name)
-    printf '%s' "$raw" | jq -c --arg title "$exact_title" '[.[] | select(.title == $title)]' | jq -f "$REMINDER_DIR/reminder_normalize.jq"
+      printf '%s' "$raw" | "$JQ_BIN" -c --arg title "$exact_title" '[.[] | select(.title == $title)]' | normalize_reminders_json
       ;;
     id)
-      matches=$(printf '%s' "$raw" | jq -c --arg id "$id_arg" '[.[] | select((.id | ascii_downcase) | startswith(($id | ascii_downcase)))]')
-      n=$(printf '%s' "$matches" | jq 'length')
-      if [[ "$n" -eq 0 ]]; then echo "Reminder not found for id: $id_arg" >&2; exit 1; fi
-      if [[ "$n" -gt 1 ]]; then echo "Reminder id is ambiguous: $id_arg" >&2; exit 1; fi
-      printf '%s' "$matches" | jq -f "$REMINDER_DIR/reminder_normalize.jq"
+      match=$(get_single_reminder_match_json "$id_arg" <<< "$raw")
+      printf '%s' "$match" | "$JQ_BIN" -s . | normalize_reminders_json
       ;;
     incomplete)
-      printf '%s' "$raw" | jq -c '[.[] | select(.isCompleted == false)]' | jq -f "$REMINDER_DIR/reminder_normalize.jq"
+      printf '%s' "$raw" | "$JQ_BIN" -c '[.[] | select(.isCompleted == false)]' | normalize_reminders_json
       ;;
     priority)
       pri_num="none"
@@ -65,23 +56,21 @@ if command -v remindctl >/dev/null 2>&1; then
         high) pri_num=9 ;;
         *) echo "Unsupported priority: $pri" >&2; exit 1 ;;
       esac
-      printf '%s' "$raw" | jq -c --argjson p "$pri_num" '[.[] | select(.priority == $p)]' | jq -f "$REMINDER_DIR/reminder_normalize.jq"
+      printf '%s' "$raw" | "$JQ_BIN" -c --argjson p "$pri_num" '[.[] | select(.priority == $p)]' | normalize_reminders_json
       ;;
     has-due-date)
-      printf '%s' "$raw" | jq -c '[.[] | select(.dueDate != null and .dueDate != "")]' | jq -f "$REMINDER_DIR/reminder_normalize.jq"
+      printf '%s' "$raw" | "$JQ_BIN" -c '[.[] | select(.dueDate != null and .dueDate != "")]' | normalize_reminders_json
       ;;
     text)
       [[ -z "$(echo "$query" | tr -d ' ')" ]] && { echo "Query must not be empty" >&2; exit 1; }
       q_lower=$(echo "$query" | tr '[:upper:]' '[:lower:]')
-      printf '%s' "$raw" | jq -c --arg q "$q_lower" '[.[] | select((.title | ascii_downcase | index($q)) or ((.notes // "" | ascii_downcase) | index($q)))]' | jq -f "$REMINDER_DIR/reminder_normalize.jq"
+      printf '%s' "$raw" | "$JQ_BIN" -c --arg q "$q_lower" '[.[] | select((.title | ascii_downcase | index($q)) or ((.notes // "" | ascii_downcase) | index($q)))]' | normalize_reminders_json
       ;;
   esac
   exit 0
 fi
 
 # AppleScript fallback: same usage, build args for search.applescript
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 search_args=("$mode")
 case "$mode" in
   exact-name)

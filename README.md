@@ -43,9 +43,9 @@ Output rules:
 ## Dependencies
 
 - macOS Reminders.app
-- Reminder commands: prefer `remindctl` and `jq`; work without remindctl via AppleScript fallback (some fallbacks still use jq for JSON)
+- Reminder commands: prefer `remindctl` and `jq`; first try `remindctl` from `PATH`, then `/opt/homebrew/bin/remindctl`, then AppleScript fallback (some fallbacks still use jq for JSON)
 
-Check remindctl access with:
+Check remindctl access with `remindctl status` or `/opt/homebrew/bin/remindctl status`.
 
 ```bash
 remindctl status

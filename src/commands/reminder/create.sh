@@ -29,18 +29,17 @@ while [[ $# -gt 0 ]]; do
     *) body="$1"; shift ;;
   esac
 done
+# shellcheck source=src/commands/reminder/_lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
-if command -v remindctl >/dev/null 2>&1; then
-  if ! command -v jq >/dev/null 2>&1; then
-    echo "jq required when using remindctl" >&2
-    exit 1
-  fi
-  cmd=(remindctl add --title "$reminder_name" --list "$list_name")
+if [[ -n "$REMINDCTL_BIN" ]]; then
+  [[ -n "$JQ_BIN" ]] || { echo "jq required when using remindctl" >&2; exit 1; }
+  cmd=(add --title "$reminder_name" --list "$list_name")
   [[ -n "$body" ]] && cmd+=(--notes "$body")
   [[ -n "$due_value" ]] && cmd+=(--due "$due_value")
   [[ -n "$priority" ]] && cmd+=(--priority "$priority")
-  raw=$("${cmd[@]}" --json --no-color --no-input) || { echo "remindctl failed" >&2; exit 1; }
-  printf '%s' "$raw" | jq --arg body "${body:-}" '
+  raw=$(run_remindctl_json "${cmd[@]}")
+  printf '%s' "$raw" | "$JQ_BIN" --arg body "${body:-}" '
     def first_reminder: if type == "array" then .[0] elif type == "object" then (.["reminder"]? // .["result"]? // .) else . end;
     (first_reminder) as $r |
     ($r | if .notes != null and .notes != "" then .notes else $body end) as $b |
@@ -51,7 +50,5 @@ if command -v remindctl >/dev/null 2>&1; then
   exit 0
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # Pass list, name, body, due, priority (empty string = omit)
-exec /usr/bin/osascript "$REPO_ROOT/src/applescripts/reminder/create.applescript" "$list_name" "$reminder_name" "${body:-}" "${due_value:-}" "${priority:-}"
+exec_reminder_applescript create.applescript "$list_name" "$reminder_name" "${body:-}" "${due_value:-}" "${priority:-}"

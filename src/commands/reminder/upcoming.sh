@@ -19,28 +19,16 @@ set -euo pipefail
 [[ $# -gt 2 ]] && { echo "Usage: $(basename "$0") <days> [list-name]" >&2; exit 1; }
 days="$1"
 list_name="${2:-}"
+# shellcheck source=src/commands/reminder/_lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
-if command -v remindctl >/dev/null 2>&1; then
-  if ! command -v jq >/dev/null 2>&1; then
-    echo "jq required when using remindctl" >&2
-    exit 1
-  fi
+if [[ -n "$REMINDCTL_BIN" ]]; then
+  [[ -n "$JQ_BIN" ]] || { echo "jq required when using remindctl" >&2; exit 1; }
   start="$(date +%Y-%m-%d)"
   end="$(date -v+${days}d +%Y-%m-%d)"
-  REMINDER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  if [[ -n "$list_name" ]]; then
-    raw=$(remindctl list "$list_name" --json --no-color --no-input) || { echo "remindctl failed" >&2; exit 1; }
-  else
-    raw=$(remindctl show all --json --no-color --no-input) || { echo "remindctl failed" >&2; exit 1; }
-  fi
-  jq -f "$REMINDER_DIR/reminder_normalize.jq" <<< "$raw" | jq --arg start "$start" --arg end "$end" '[.[] | select(.completed == false and .due_date != null and (.due_date | .[0:10]) >= $start and (.due_date | .[0:10]) <= $end)]'
+  raw=$(remindctl_all_or_list_json "$list_name")
+  normalize_reminders_json <<< "$raw" | "$JQ_BIN" --arg start "$start" --arg end "$end" '[.[] | select(.completed == false and .due_date != null and (.due_date | .[0:10]) >= $start and (.due_date | .[0:10]) <= $end)]'
   exit 0
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-if [[ -n "$list_name" ]]; then
-  exec /usr/bin/osascript "$REPO_ROOT/src/applescripts/reminder/upcoming.applescript" "$days" "$list_name"
-else
-  exec /usr/bin/osascript "$REPO_ROOT/src/applescripts/reminder/upcoming.applescript" "$days"
-fi
+exec_reminder_applescript_optional_last_arg upcoming.applescript "$list_name" "$days"

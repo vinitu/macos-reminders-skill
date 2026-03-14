@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=src/commands/reminder/_lib/common.sh
+source "$REPO_ROOT/src/commands/reminder/_lib/common.sh"
+
 prefix="CodexTest_$(date +%s)"
 source_list="${prefix}_src"
 target_list="${prefix}_dst"
@@ -85,7 +89,7 @@ wait_for_list() {
   local attempt=0
 
   while [[ "$attempt" -lt 20 ]]; do
-    if json_matches "$(remindctl list --json --no-color --no-input)" 'payload.some(item => item.title === "'"$list_name"'")'; then
+    if json_matches "$("$REMINDCTL_BIN" list --json --no-color --no-input)" 'payload.some(item => item.title === "'"$list_name"'")'; then
       return
     fi
     attempt=$((attempt + 1))
@@ -109,8 +113,8 @@ APPLESCRIPT
 trap cleanup EXIT
 
 osascript -e 'tell application "Reminders" to version' >/dev/null
-command -v remindctl >/dev/null
-status_output="$(remindctl status)"
+[[ -n "$REMINDCTL_BIN" ]] || { printf 'smoke_reminders: remindctl is not available\n' >&2; exit 1; }
+status_output="$("$REMINDCTL_BIN" status)"
 if [[ "$status_output" != *"access"* && "$status_output" != *"Access"* ]]; then
   printf 'smoke_reminders: remindctl status is unexpected: %s\n' "$status_output" >&2
   exit 1

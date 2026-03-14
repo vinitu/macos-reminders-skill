@@ -41,9 +41,9 @@ If the user needs structured output, use `--json`.
 
 ## Dependencies
 
-Reminder commands prefer `remindctl` and `jq`. When `remindctl` is not available they use AppleScript fallback (no extra install). Some fallback paths still use `jq` for JSON output.
+Reminder commands prefer `remindctl` and `jq`. They first try `remindctl` from `PATH`, then `/opt/homebrew/bin/remindctl`, and use AppleScript fallback only when neither is available. Some fallback paths still use `jq` for JSON output.
 
-Check remindctl access with:
+Check remindctl access with `remindctl status` or `/opt/homebrew/bin/remindctl status`.
 
 ```bash
 remindctl status
