@@ -14,7 +14,7 @@ dictionary-standard:
 
 compile:
 	@set -euo pipefail; \
-	find scripts -name '*.applescript' -print | while IFS= read -r file; do \
+	find src/applescripts -name '*.applescript' -print | while IFS= read -r file; do \
 		osacompile -o /tmp/$$(echo "$$file" | tr '/' '_' | sed 's/\.applescript$$/.scpt/') "$$file"; \
 	done
 
