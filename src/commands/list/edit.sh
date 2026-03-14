@@ -12,7 +12,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 OSA="$REPO_ROOT/src/applescripts/list"
 
 [[ $# -lt 3 ]] && { echo "Usage: $(basename "$0") <list-name> <name|color|emblem> <value>" >&2; exit 1; }
@@ -26,9 +26,9 @@ if [[ "$prop" == "name" ]]; then
 else
   target_name="$list_name"
 fi
-id=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" id --format=json | jq -r '.value')
-name_val=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" name --format=json | jq -r '.value')
-container=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" container --format=json | jq -r '.value')
-color=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" color --format=json | jq -r '.value')
-emblem=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" emblem --format=json | jq -r '.value')
+id=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" id | jq -r '.value')
+name_val=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" name | jq -r '.value')
+container=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" container | jq -r '.value')
+color=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" color | jq -r '.value')
+emblem=$(/usr/bin/osascript "$OSA/get.applescript" "$target_name" emblem | jq -r '.value')
 jq -n --arg id "$id" --arg name "$name_val" --arg container "$container" --arg color "$color" --arg emblem "$emblem" '{id:$id,name:$name,container:$container,color:$color,emblem:$emblem}'

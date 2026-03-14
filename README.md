@@ -36,22 +36,22 @@ Output rules:
 
 - `src/commands/account/*` -> AppleScript in `src/applescripts/account/*`
 - `src/commands/list/*` -> AppleScript in `src/applescripts/list/*`
-- `src/commands/reminder/*` -> `remindctl`
+- `src/commands/reminder/*` -> prefer `remindctl` + jq; fallback to AppleScript when remindctl is missing
 
 `src/applescripts` is internal. Do not call it directly from the skill instructions.
 
 ## Dependencies
 
 - macOS Reminders.app
-- `remindctl` and `jq` for all public reminder commands
+- Reminder commands: prefer `remindctl` and `jq`; work without remindctl via AppleScript fallback (some fallbacks still use jq for JSON)
 
-Check reminder access with:
+Check remindctl access with:
 
 ```bash
 remindctl status
 ```
 
-A clean macOS install does not include `remindctl`.
+A clean macOS install does not include `remindctl`; the skill still works via AppleScript.
 
 ## Repo Layout
 

@@ -1,9 +1,7 @@
+-- Output: JSON array of list names. Usage: <exact-name|id|color|emblem|text> <query> [account-name]
 on run argv
-    set parsedArgs to my parseArgs(argv)
-    set args to item 1 of parsedArgs
-    set outputFormat to item 2 of parsedArgs
-
-    if (count of args) is less than 2 then error "Usage: osascript src/applescripts/list/search.applescript <exact-name|id|color|emblem|text> <query> [account-name] [--format=plain|json]"
+    set args to my stripFormatArg(argv)
+    if (count of args) is less than 2 then error "Usage: osascript list/search.applescript <exact-name|id|color|emblem|text> <query> [account-name]"
 
     set searchMode to item 1 of args
     set queryText to my trimText(item 2 of args)
@@ -20,27 +18,32 @@ on run argv
     end tell
 
     if searchMode is "exact-name" then
-        return my outputTextList(my findByProperty(listCollection, "name", queryText), outputFormat)
+        return my textListToJson(my findByProperty(listCollection, "name", queryText))
     end if
-
     if searchMode is "id" then
-        return my outputTextList(my findByProperty(listCollection, "id", queryText), outputFormat)
+        return my textListToJson(my findByProperty(listCollection, "id", queryText))
     end if
-
     if searchMode is "color" then
-        return my outputTextList(my findByProperty(listCollection, "color", queryText), outputFormat)
+        return my textListToJson(my findByProperty(listCollection, "color", queryText))
     end if
-
     if searchMode is "emblem" then
-        return my outputTextList(my findByProperty(listCollection, "emblem", queryText), outputFormat)
+        return my textListToJson(my findByProperty(listCollection, "emblem", queryText))
     end if
-
     if searchMode is "text" then
-        return my outputTextList(my textSearch(listCollection, queryText), outputFormat)
+        return my textListToJson(my textSearch(listCollection, queryText))
     end if
-
     error "Unsupported search mode: " & searchMode
 end run
+
+on stripFormatArg(argv)
+    if (count of argv) is 0 then return argv
+    set lastArg to item -1 of argv as text
+    if lastArg starts with "--format=" then
+        if (count of argv) is 1 then return {}
+        return items 1 thru -2 of argv
+    end if
+    return argv
+end stripFormatArg
 
 on findByProperty(listCollection, propertyName, queryText)
     set hits to {}
@@ -72,38 +75,13 @@ on textSearch(listCollection, queryText)
     return hits
 end textSearch
 
-on outputTextList(textList, outputFormat)
-    if outputFormat is "json" then return my textListToJson(textList)
-    return textList
-end outputTextList
-
 on textListToJson(textList)
     set chunks to {}
     repeat with currentValue in textList
         set end of chunks to "\"" & my jsonEscape(currentValue as text) & "\""
     end repeat
-    return "[" & my join(chunks, ",") & "]"
+    return ("[" & my join(chunks, ",") & "]") as text
 end textListToJson
-
-on parseArgs(argv)
-    set outputFormat to "plain"
-    set args to argv
-
-    if (count of args) is greater than 0 then
-        set lastArg to item -1 of args as text
-        if lastArg starts with "--format=" then
-            set outputFormat to text 10 thru -1 of lastArg
-            if outputFormat is not "plain" and outputFormat is not "json" then error "Unsupported format: " & outputFormat
-            if (count of args) is 1 then
-                set args to {}
-            else
-                set args to items 1 thru -2 of args
-            end if
-        end if
-    end if
-
-    return {args, outputFormat}
-end parseArgs
 
 on trimText(inputText)
     set textValue to inputText as text

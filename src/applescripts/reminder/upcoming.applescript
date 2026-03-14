@@ -1,33 +1,15 @@
--- Output: JSON array of reminders due in the next N days. Usage: <days> [list-name] [--format=json]
+-- Output: JSON array of reminders due in the next N days. Usage: <days> [list-name]
 on run argv
-	set {args, _} to my parseArgs(argv)
-	if (count of args) < 1 then error "Usage: osascript .../upcoming.applescript <days> [list-name] [--format=json]"
-	set dayCount to item 1 of args as integer
+	if (count of argv) < 1 then error "Usage: osascript .../upcoming.applescript <days> [list-name]"
+	set dayCount to item 1 of argv as integer
 	if dayCount < 0 then error "Days must be >= 0"
 	set listName to missing value
-	if (count of args) >= 2 then set listName to item 2 of args
+	if (count of argv) >= 2 then set listName to item 2 of argv
 	set startDate to current date
 	set endDate to startDate + (dayCount * days)
 	set hits to my collectDueWindow(listName, startDate, endDate)
 	return my encodeJson(hits)
 end run
-
-on parseArgs(argv)
-	set listName to missing value
-	set args to argv
-	if (count of args) > 0 then
-		set lastArg to item -1 of args as text
-		if lastArg starts with "--format=" then
-			if (count of args) is 1 then
-				set args to {}
-			else
-				set args to items 1 thru -2 of args
-			end if
-		end if
-	end if
-	if (count of args) is 1 then set listName to item 1 of args
-	return {args, listName}
-end parseArgs
 
 on collectDueWindow(optionalListName, startDate, endDate)
 	set out to {}

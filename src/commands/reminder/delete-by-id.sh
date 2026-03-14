@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Output: JSON {deleted, id}.
-# Requires: remindctl, jq. Without remindctl prints "not implemented yet" and exits 1.
+# Delegates to delete.sh (prefer remindctl, AppleScript fallback).
 # Example:
 #   {
 #     "deleted": true,

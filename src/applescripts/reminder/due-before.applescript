@@ -1,56 +1,51 @@
+-- Output: JSON array of reminders due before the given date. Usage: <date> [list-name]
 on run argv
-    set parsedArgs to my parseArgs(argv)
-    set args to item 1 of parsedArgs
-    set outputFormat to item 2 of parsedArgs
-
-    if (count of args) is less than 1 then error "Usage: osascript src/applescripts/reminder/due-before.applescript <date-text> [list-name] [--format=plain|json]"
+    set args to my stripFormatArg(argv)
+    if (count of args) is less than 1 then error "Usage: osascript due-before.applescript <date> [list-name]"
 
     set cutoffDate to date (item 1 of args)
     set listName to missing value
     if (count of args) is greater than or equal to 2 then set listName to item 2 of args
 
     set hits to my collectDueBefore(listName, cutoffDate, true)
-    return my outputTextList(hits, outputFormat)
+    return my encodeJson(hits)
 end run
 
 on collectDueBefore(optionalListName, cutoffDate, requireIncomplete)
-    set hits to {}
+    set out to {}
 
     tell application "Reminders"
         set listCollection to my selectedLists(optionalListName)
-
-        repeat with currentList in listCollection
-            set hits to my appendMatchingDueBefore(hits, currentList, cutoffDate, requireIncomplete)
+        repeat with L in listCollection
+            set listName to name of L
+            set rems to (every reminder of L whose completed is false)
+            repeat with R in rems
+                set dueVal to due date of R
+                if dueVal is missing value then set dueVal to allday due date of R
+                if dueVal is not missing value and dueVal < cutoffDate then
+                    set end of out to my reminderRecord(R, listName, dueVal)
+                end if
+            end repeat
         end repeat
     end tell
 
-    return hits
+    return out
 end collectDueBefore
 
-on appendMatchingDueBefore(existingHits, currentList, cutoffDate, requireIncomplete)
+on reminderRecord(R, listName, dueVal)
     tell application "Reminders"
-        set reminderNames to my normalizeToList(name of every reminder of currentList)
-        set reminderCount to count of reminderNames
-        if reminderCount is 0 then return existingHits
-
-        set completionStates to my normalizeToList(completed of every reminder of currentList)
-        set dueDates to my normalizeToList(due date of every reminder of currentList)
-        set allDayDueDates to my normalizeToList(allday due date of every reminder of currentList)
+        return {id:id of R, name:name of R, list:listName, body:body of R, completed:completed of R, priority:my priorityLabel(priority of R), due_date:dueVal}
     end tell
+end reminderRecord
 
-    repeat with reminderIndex from 1 to reminderCount
-        set isCompleted to item reminderIndex of completionStates
-        if requireIncomplete and isCompleted is true then
-            -- skip completed
-        else
-            set dueValue to item reminderIndex of dueDates
-            if dueValue is missing value then set dueValue to item reminderIndex of allDayDueDates
-            if my isDueBeforeCutoff(dueValue, cutoffDate) then set end of existingHits to (item reminderIndex of reminderNames) as text
-        end if
-    end repeat
-
-    return existingHits
-end appendMatchingDueBefore
+on priorityLabel(p)
+    if p is missing value then return "none"
+    if p is 0 then return "none"
+    if p is 1 then return "low"
+    if p is 5 then return "medium"
+    if p is 9 then return "high"
+    return "none"
+end priorityLabel
 
 on isDueBeforeCutoff(dueValue, cutoffDate)
     if dueValue is missing value then return false
@@ -72,38 +67,79 @@ on normalizeToList(value)
     return {value}
 end normalizeToList
 
-on outputTextList(textList, outputFormat)
-    if outputFormat is "json" then return my textListToJson(textList)
-    return textList
-end outputTextList
-
-on textListToJson(textList)
-    set chunks to {}
-    repeat with currentValue in textList
-        set end of chunks to "\"" & my jsonEscape(currentValue as text) & "\""
-    end repeat
-    return "[" & my join(chunks, ",") & "]"
-end textListToJson
-
-on parseArgs(argv)
-    set outputFormat to "plain"
-    set args to argv
-
-    if (count of args) is greater than 0 then
-        set lastArg to item -1 of args as text
-        if lastArg starts with "--format=" then
-            set outputFormat to text 10 thru -1 of lastArg
-            if outputFormat is not "plain" and outputFormat is not "json" then error "Unsupported format: " & outputFormat
-            if (count of args) is 1 then
-                set args to {}
-            else
-                set args to items 1 thru -2 of args
-            end if
-        end if
+on stripFormatArg(argv)
+    if (count of argv) is 0 then return argv
+    set lastArg to item -1 of argv as text
+    if lastArg starts with "--format=" then
+        if (count of argv) is 1 then return {}
+        return items 1 thru -2 of argv
     end if
+    return argv
+end stripFormatArg
 
-    return {args, outputFormat}
-end parseArgs
+on encodeJson(recList)
+    set parts to {}
+    repeat with rec in recList
+        set end of parts to my encodeOne(rec)
+    end repeat
+    return "[" & my join(parts, ",") & "]"
+end encodeJson
+
+on encodeOne(rec)
+    set bid to my jsonStr(id of rec)
+    set bname to my jsonStr(name of rec)
+    set blist to my jsonStr(list of rec)
+    set bbody to my jsonNull(body of rec)
+    set bcompleted to (completed of rec as text = "true")
+    set bpriority to my jsonStr(priority of rec)
+    set bdue to my jsonDate(due_date of rec)
+    return "{\"id\":" & bid & ",\"name\":" & bname & ",\"list\":" & blist & ",\"body\":" & bbody & ",\"completed\":" & bcompleted & ",\"priority\":" & bpriority & ",\"due_date\":" & bdue & "}"
+end encodeOne
+
+on jsonStr(val)
+    if val is missing value then return "\"\""
+    return "\"" & my escape(val as text) & "\""
+end jsonStr
+
+on jsonNull(val)
+    if val is missing value or (val as text) is "" then return "null"
+    return "\"" & my escape(val as text) & "\""
+end jsonNull
+
+on jsonDate(d)
+    if d is missing value then return "null"
+    set y to year of d
+    set m to my monthToNumber(month of d)
+    set dday to day of d
+    set h to hours of d
+    set min to minutes of d
+    set s to seconds of d
+    set t to (y as text) & "-" & my pad(m, 2) & "-" & my pad(dday, 2) & "T" & my pad(h, 2) & ":" & my pad(min, 2) & ":" & my pad(s, 2)
+    return "\"" & t & "\""
+end jsonDate
+
+on monthToNumber(monthConst)
+    set months to {January, February, March, April, May, June, July, August, September, October, November, December}
+    repeat with i from 1 to 12
+        if item i of months is monthConst then return i
+    end repeat
+    return 1
+end monthToNumber
+
+on pad(n, w)
+    set t to n as text
+    repeat while (length of t) < w
+        set t to "0" & t
+    end repeat
+    return t
+end pad
+
+on escape(t)
+    set t to my replaceText("\\", "\\\\", t as text)
+    set t to my replaceText("\"", "\\\"", t)
+    set t to my replaceText(linefeed, "\\n", t)
+    return t
+end escape
 
 on join(textList, delimiterText)
     if (count of textList) is 0 then return ""
@@ -113,13 +149,6 @@ on join(textList, delimiterText)
     set AppleScript's text item delimiters to currentDelimiters
     return joinedText
 end join
-
-on jsonEscape(valueText)
-    set escaped to my replaceText("\\", "\\\\", valueText as text)
-    set escaped to my replaceText("\"", "\\\"", escaped)
-    set escaped to my replaceText(linefeed, "\\n", escaped)
-    return escaped
-end jsonEscape
 
 on replaceText(findText, replacementText, sourceText)
     set AppleScript's text item delimiters to findText

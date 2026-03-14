@@ -28,7 +28,7 @@ Backend map:
 
 - `account/*` -> AppleScript
 - `list/*` -> AppleScript
-- `reminder/*` -> `remindctl`
+- `reminder/*` -> prefer `remindctl` + jq; fallback to AppleScript when remindctl is missing
 
 ## Output Rules
 
@@ -41,15 +41,15 @@ If the user needs structured output, use `--json`.
 
 ## Dependencies
 
-Public reminder commands require `remindctl` and `jq`.
+Reminder commands prefer `remindctl` and `jq`. When `remindctl` is not available they use AppleScript fallback (no extra install). Some fallback paths still use `jq` for JSON output.
 
-Check access with:
+Check remindctl access with:
 
 ```bash
 remindctl status
 ```
 
-A clean macOS install does not include `remindctl`.
+A clean macOS install does not include `remindctl`; the skill still works via AppleScript.
 
 ## Public Commands
 

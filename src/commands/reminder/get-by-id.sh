@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Output: JSON (reminder object or {id, property, value} when property given).
-# Requires: remindctl, jq. Without remindctl prints "not implemented yet" and exits 1.
+# Delegates to get.sh (prefer remindctl, AppleScript fallback).
 # Example (full reminder):
 #   {
 #     "id": "...",

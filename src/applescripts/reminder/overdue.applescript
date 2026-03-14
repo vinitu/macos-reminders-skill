@@ -1,6 +1,7 @@
--- Output: JSON array of overdue reminders. Usage: [list-name] [--format=json]
+-- Output: JSON array of overdue reminders. Usage: [list-name]
 on run argv
-	set {listName, _} to my parseArgs(argv)
+	set listName to missing value
+	if (count of argv) is 1 then set listName to item 1 of argv
 	set cutoff to (current date)
 	set cutoff's hours to 0
 	set cutoff's minutes to 0
@@ -8,23 +9,6 @@ on run argv
 	set hits to my collectOverdue(listName, cutoff)
 	return my encodeJson(hits)
 end run
-
-on parseArgs(argv)
-	set listName to missing value
-	set args to argv
-	if (count of args) > 0 then
-		set lastArg to item -1 of args as text
-		if lastArg starts with "--format=" then
-			if (count of args) is 1 then
-				set args to {}
-			else
-				set args to items 1 thru -2 of args
-			end if
-		end if
-	end if
-	if (count of args) is 1 then set listName to item 1 of args
-	return {listName, args}
-end parseArgs
 
 on collectOverdue(optionalListName, cutoff)
 	set out to {}

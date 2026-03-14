@@ -1,9 +1,7 @@
+-- Output: JSON {account, property, value}. Usage: <account-name> <property>
 on run argv
-    set parsedArgs to my parseArgs(argv)
-    set args to item 1 of parsedArgs
-    set outputFormat to item 2 of parsedArgs
-
-    if (count of args) is less than 2 then error "Usage: osascript src/applescripts/account/get.applescript <account-name> <id|name|lists_count|reminders_count> [--format=plain|json]"
+    set args to my stripFormatArg(argv)
+    if (count of args) is less than 2 then error "Usage: osascript account/get.applescript <account-name> <id|name|lists_count|reminders_count>"
 
     set accountName to item 1 of args
     set propertyName to my normalizeProperty(item 2 of args)
@@ -25,12 +23,18 @@ on run argv
         error "Unsupported property: " & propertyName
     end if
 
-    if outputFormat is "json" then
-        return "{\"account\":\"" & my jsonEscape(accountName) & "\",\"property\":\"" & my jsonEscape(propertyName) & "\",\"value\":\"" & my jsonEscape(valueText) & "\"}"
-    end if
-
-    return valueText
+    return "{\"account\":\"" & my jsonEscape(accountName) & "\",\"property\":\"" & my jsonEscape(propertyName) & "\",\"value\":\"" & my jsonEscape(valueText) & "\"}"
 end run
+
+on stripFormatArg(argv)
+    if (count of argv) is 0 then return argv
+    set lastArg to item -1 of argv as text
+    if lastArg starts with "--format=" then
+        if (count of argv) is 1 then return {}
+        return items 1 thru -2 of argv
+    end if
+    return argv
+end stripFormatArg
 
 on readStringValue(propertyName, accountName)
     tell application "Reminders"
@@ -61,26 +65,6 @@ on countReminders(accountName)
 
     return totalCount
 end countReminders
-
-on parseArgs(argv)
-    set outputFormat to "plain"
-    set args to argv
-
-    if (count of args) is greater than 0 then
-        set lastArg to item -1 of args as text
-        if lastArg starts with "--format=" then
-            set outputFormat to text 10 thru -1 of lastArg
-            if outputFormat is not "plain" and outputFormat is not "json" then error "Unsupported format: " & outputFormat
-            if (count of args) is 1 then
-                set args to {}
-            else
-                set args to items 1 thru -2 of args
-            end if
-        end if
-    end if
-
-    return {args, outputFormat}
-end parseArgs
 
 on normalizeProperty(propertyName)
     set normalizedName to propertyName as text

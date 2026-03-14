@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Output: JSON (moved reminder in AGENTS.md shape).
-# Requires: remindctl, jq. Without remindctl prints "not implemented yet" and exits 1.
+# Delegates to move.sh (prefer remindctl, AppleScript fallback).
 # Example:
 #   {
 #     "id": "...",

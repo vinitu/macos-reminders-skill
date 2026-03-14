@@ -1,9 +1,7 @@
+-- Output: JSON {list, property, value}. Usage: <list-name> <property>
 on run argv
-    set parsedArgs to my parseArgs(argv)
-    set args to item 1 of parsedArgs
-    set outputFormat to item 2 of parsedArgs
-
-    if (count of args) is less than 2 then error "Usage: osascript src/applescripts/list/get.applescript <list-name> <id|name|container|color|emblem> [--format=plain|json]"
+    set args to my stripFormatArg(argv)
+    if (count of args) is less than 2 then error "Usage: osascript list/get.applescript <list-name> <id|name|container|color|emblem>"
 
     set listName to item 1 of args
     set propertyName to my normalizeProperty(item 2 of args)
@@ -20,33 +18,18 @@ on run argv
     end tell
 
     if valueText is missing value then error "Unsupported property: " & propertyName
-
-    if outputFormat is "json" then
-        return "{\"list\":\"" & my jsonEscape(listName) & "\",\"property\":\"" & my jsonEscape(propertyName) & "\",\"value\":\"" & my jsonEscape(valueText) & "\"}"
-    end if
-
-    return valueText
+    return "{\"list\":\"" & my jsonEscape(listName) & "\",\"property\":\"" & my jsonEscape(propertyName) & "\",\"value\":\"" & my jsonEscape(valueText) & "\"}"
 end run
 
-on parseArgs(argv)
-    set outputFormat to "plain"
-    set args to argv
-
-    if (count of args) is greater than 0 then
-        set lastArg to item -1 of args as text
-        if lastArg starts with "--format=" then
-            set outputFormat to text 10 thru -1 of lastArg
-            if outputFormat is not "plain" and outputFormat is not "json" then error "Unsupported format: " & outputFormat
-            if (count of args) is 1 then
-                set args to {}
-            else
-                set args to items 1 thru -2 of args
-            end if
-        end if
+on stripFormatArg(argv)
+    if (count of argv) is 0 then return argv
+    set lastArg to item -1 of argv as text
+    if lastArg starts with "--format=" then
+        if (count of argv) is 1 then return {}
+        return items 1 thru -2 of argv
     end if
-
-    return {args, outputFormat}
-end parseArgs
+    return argv
+end stripFormatArg
 
 on normalizeProperty(propertyName)
     set normalizedName to propertyName as text

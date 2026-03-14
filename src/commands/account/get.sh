@@ -17,15 +17,15 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 OSA="$REPO_ROOT/src/applescripts/account"
 
 [[ $# -lt 2 ]] && { echo "Usage: $(basename "$0") <account-name> <id|name|lists_count|reminders_count>" >&2; exit 1; }
 
 account_name="$1"
 property="${2//-/_}"
-id=$(/usr/bin/osascript "$OSA/get.applescript" "$account_name" id --format=json | jq -r '.value')
-val=$(/usr/bin/osascript "$OSA/get.applescript" "$account_name" "$property" --format=json | jq -r '.value')
+id=$(/usr/bin/osascript "$OSA/get.applescript" "$account_name" id | jq -r '.value')
+val=$(/usr/bin/osascript "$OSA/get.applescript" "$account_name" "$property" | jq -r '.value')
 if [[ "$property" == "lists_count" || "$property" == "reminders_count" ]]; then
   jq -n --arg id "$id" --arg name "$account_name" --arg prop "$property" --argjson v "$val" '{id:$id,name:$name,property:$prop,value:$v}'
 else

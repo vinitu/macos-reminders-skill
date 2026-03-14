@@ -1,8 +1,6 @@
+-- Output: JSON array of list names. Usage: [account-name]
 on run argv
-    set parsedArgs to my parseArgs(argv)
-    set args to item 1 of parsedArgs
-    set outputFormat to item 2 of parsedArgs
-
+    set args to my stripFormatArg(argv)
     tell application "Reminders"
         if (count of args) is 0 then
             set listNames to name of every list
@@ -13,29 +11,19 @@ on run argv
             set listNames to name of every list of targetAccount
         end if
     end tell
-
-    return my outputTextList(my normalizeToList(listNames), outputFormat)
+    set jsonStr to my textListToJson(my normalizeToList(listNames))
+    return jsonStr as text
 end run
 
-on parseArgs(argv)
-    set outputFormat to "plain"
-    set args to argv
-
-    if (count of args) is greater than 0 then
-        set lastArg to item -1 of args as text
-        if lastArg starts with "--format=" then
-            set outputFormat to text 10 thru -1 of lastArg
-            if outputFormat is not "plain" and outputFormat is not "json" then error "Unsupported format: " & outputFormat
-            if (count of args) is 1 then
-                set args to {}
-            else
-                set args to items 1 thru -2 of args
-            end if
-        end if
+on stripFormatArg(argv)
+    if (count of argv) is 0 then return argv
+    set lastArg to item -1 of argv as text
+    if lastArg starts with "--format=" then
+        if (count of argv) is 1 then return {}
+        return items 1 thru -2 of argv
     end if
-
-    return {args, outputFormat}
-end parseArgs
+    return argv
+end stripFormatArg
 
 on normalizeToList(value)
     if value is missing value then return {}
@@ -43,17 +31,12 @@ on normalizeToList(value)
     return {value}
 end normalizeToList
 
-on outputTextList(textList, outputFormat)
-    if outputFormat is "json" then return my textListToJson(textList)
-    return textList
-end outputTextList
-
 on textListToJson(textList)
     set chunks to {}
     repeat with currentValue in textList
         set end of chunks to "\"" & my jsonEscape(currentValue as text) & "\""
     end repeat
-    return "[" & my join(chunks, ",") & "]"
+    return ("[" & my join(chunks, ",") & "]") as text
 end textListToJson
 
 on join(textList, delimiterText)
