@@ -61,7 +61,7 @@ jobs:
       - name: Run dictionary contract
         run: |
           set -euo pipefail
-          bash tests/dictionary_contract.sh
+          bash scripts/tests/dictionary_contract.sh
 
   determine_version:
     name: Detect version bump
