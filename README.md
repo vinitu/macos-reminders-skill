@@ -2,8 +2,8 @@
 
 This repo stores an AI agent skill for Apple Reminders.app on macOS.
 
-The public interface is `src/commands`.
-`src/applescripts` stores internal AppleScript backends and dictionary-aligned coverage.
+The public interface is `scripts/commands`.
+`scripts/applescripts` stores internal AppleScript backends and dictionary-aligned coverage.
 
 ## Installation
 
@@ -25,29 +25,32 @@ The installed global skill directory is usually `~/.agents/skills/macos-reminder
 Run skill actions with:
 
 ```bash
-src/commands/<entity>/<action>.sh [args...]
+scripts/commands/<entity>/<action>.sh [args...]
 ```
 
 Output rules:
 
 - Commands return JSON by default unless noted otherwise.
-- `src/commands/*/show.sh` opens the Reminders UI; it does not return the normalized JSON contract.
+- `scripts/commands/account/show.sh` and `scripts/commands/list/show.sh` open the Reminders UI and return JSON like `{"shown": true, ...}`.
+- `scripts/commands/reminder/show.sh` is not part of the public interface.
 - `--json` is not supported.
 - `--plain` is not supported.
 - `--format=plain|json` is not supported.
 
 ## Backend Map
 
-- `src/commands/account/*` -> AppleScript in `src/applescripts/account/*`
-- `src/commands/list/*` -> AppleScript in `src/applescripts/list/*`
-- `src/commands/reminder/*` -> prefer `remindctl` + jq; fallback to AppleScript when remindctl is missing
+- `scripts/commands/account/*` -> AppleScript in `scripts/applescripts/account/*`
+- `scripts/commands/list/*` -> AppleScript in `scripts/applescripts/list/*`
+- `scripts/commands/reminder/*` -> prefer `remindctl` + jq; fallback to AppleScript when remindctl is missing
 
-`src/applescripts` is internal. Do not call it directly from the skill instructions.
+`scripts/applescripts` is internal. Do not call it directly from the skill instructions.
 
 ## Dependencies
 
 - macOS Reminders.app
-- Reminder commands: prefer `remindctl` and `jq`; first try `remindctl` from `PATH`, then `/opt/homebrew/bin/remindctl`, then AppleScript fallback (some fallbacks still use jq for JSON)
+- `jq`
+- Reminder commands: prefer `remindctl` and `jq`; first try `remindctl` from `PATH`, then `/opt/homebrew/bin/remindctl`, then AppleScript fallback
+- Account and list command wrappers also use `jq` to produce JSON
 
 Check remindctl access with `remindctl status` or `/opt/homebrew/bin/remindctl status`.
 
@@ -62,75 +65,75 @@ A clean macOS install does not include `remindctl`; the skill still works via Ap
 - `AGENTS.md` - repo rules for future agents.
 - `SKILL.md` - the main skill workflow and command reference.
 - `Makefile` - helper commands for dictionary dump, compile, and tests.
-- `src/commands/` - public shell command interface.
-- `src/applescripts/` - internal AppleScript backends in `<entity>/<action>.applescript` format.
-- `tests/` - live integration checks.
+- `scripts/commands/` - public shell command interface.
+- `scripts/applescripts/` - internal AppleScript backends in `<entity>/<action>.applescript` format.
+- `scripts/tests/` - live integration checks.
 
 ## Command Surface
 
 Account:
 
-- `src/commands/account/list.sh`
-- `src/commands/account/get.sh`
-- `src/commands/account/search.sh`
-- `src/commands/account/show.sh`
-- `src/commands/account/default-account.sh`
-- `src/commands/account/default-list.sh`
+- `scripts/commands/account/list.sh`
+- `scripts/commands/account/get.sh`
+- `scripts/commands/account/search.sh`
+- `scripts/commands/account/show.sh`
+- `scripts/commands/account/default-account.sh`
+- `scripts/commands/account/default-list.sh`
 
 List:
 
-- `src/commands/list/list.sh`
-- `src/commands/list/create.sh`
-- `src/commands/list/show.sh`
-- `src/commands/list/edit.sh`
-- `src/commands/list/delete.sh`
-- `src/commands/list/search.sh`
-- `src/commands/list/get.sh`
-- `src/commands/list/exists.sh`
+- `scripts/commands/list/list.sh`
+- `scripts/commands/list/create.sh`
+- `scripts/commands/list/show.sh`
+- `scripts/commands/list/edit.sh`
+- `scripts/commands/list/delete.sh`
+- `scripts/commands/list/search.sh`
+- `scripts/commands/list/get.sh`
+- `scripts/commands/list/exists.sh`
 
 Reminder:
 
-- `src/commands/reminder/list.sh`
-- `src/commands/reminder/count.sh`
-- `src/commands/reminder/today.sh`
-- `src/commands/reminder/overdue.sh`
-- `src/commands/reminder/upcoming.sh`
-- `src/commands/reminder/due-before.sh`
-- `src/commands/reminder/due-range.sh`
-- `src/commands/reminder/today-or-overdue.sh`
-- `src/commands/reminder/create.sh`
-- `src/commands/reminder/get.sh`
-- `src/commands/reminder/get-by-id.sh`
-- `src/commands/reminder/edit.sh`
-- `src/commands/reminder/edit-by-id.sh`
-- `src/commands/reminder/reschedule.sh`
-- `src/commands/reminder/reschedule-by-id.sh`
-- `src/commands/reminder/delete.sh`
-- `src/commands/reminder/delete-by-id.sh`
-- `src/commands/reminder/complete.sh`
-- `src/commands/reminder/move.sh`
-- `src/commands/reminder/move-by-id.sh`
-- `src/commands/reminder/exists.sh`
-- `src/commands/reminder/search.sh`
+- `scripts/commands/reminder/list.sh`
+- `scripts/commands/reminder/count.sh`
+- `scripts/commands/reminder/today.sh`
+- `scripts/commands/reminder/overdue.sh`
+- `scripts/commands/reminder/upcoming.sh`
+- `scripts/commands/reminder/due-before.sh`
+- `scripts/commands/reminder/due-range.sh`
+- `scripts/commands/reminder/today-or-overdue.sh`
+- `scripts/commands/reminder/create.sh`
+- `scripts/commands/reminder/get.sh`
+- `scripts/commands/reminder/get-by-id.sh`
+- `scripts/commands/reminder/edit.sh`
+- `scripts/commands/reminder/edit-by-id.sh`
+- `scripts/commands/reminder/reschedule.sh`
+- `scripts/commands/reminder/reschedule-by-id.sh`
+- `scripts/commands/reminder/delete.sh`
+- `scripts/commands/reminder/delete-by-id.sh`
+- `scripts/commands/reminder/complete.sh`
+- `scripts/commands/reminder/move.sh`
+- `scripts/commands/reminder/move-by-id.sh`
+- `scripts/commands/reminder/exists.sh`
+- `scripts/commands/reminder/search.sh`
 
 Not published:
 
-- `src/commands/reminder/show.sh`
+- `scripts/commands/reminder/show.sh`
 
 ## Examples
 
 ```bash
-src/commands/account/list.sh
-src/commands/account/default-list.sh
-src/commands/list/create.sh "Errands"
-src/commands/list/get.sh "Inbox" id
-src/commands/reminder/today.sh
-src/commands/reminder/create.sh "Inbox" "Buy milk" "2 liters" --priority high
-src/commands/reminder/get.sh --id "REMINDER-ID" body
-src/commands/reminder/edit.sh --id "REMINDER-ID" body "3 liters"
-src/commands/reminder/reschedule.sh --id "REMINDER-ID" "2030-01-15"
-src/commands/reminder/complete.sh --id "REMINDER-ID"
-src/commands/reminder/delete.sh --id "REMINDER-ID"
+scripts/commands/account/list.sh
+scripts/commands/account/default-list.sh
+scripts/commands/list/create.sh "Errands"
+scripts/commands/list/get.sh "Inbox" id
+scripts/commands/reminder/today.sh
+scripts/commands/reminder/create.sh "Inbox" "Buy milk" "2 liters" --priority high
+scripts/commands/reminder/get.sh --id "REMINDER-ID" body
+scripts/commands/reminder/edit.sh --id "REMINDER-ID" body "3 liters"
+scripts/commands/reminder/reschedule.sh --id "REMINDER-ID" "2030-01-15"
+scripts/commands/reminder/complete.sh --id "REMINDER-ID"
+scripts/commands/reminder/delete.sh --id "REMINDER-ID"
 ```
 
 ## Reminder Contract
@@ -150,6 +153,7 @@ src/commands/reminder/delete.sh --id "REMINDER-ID"
   - `low`
   - `medium`
   - `high`
+- `exists.sh` returns `{"exists": false, "id": null}` when a reminder is not found.
 
 These reminder features are not part of the public interface:
 
@@ -169,3 +173,5 @@ These reminder features are not part of the public interface:
 make compile
 make test
 ```
+
+`make test` runs live smoke checks against Reminders.app and expects working Reminders automation access. It also expects `remindctl` to be installed and reachable.

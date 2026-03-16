@@ -14,14 +14,14 @@ dictionary-standard:
 
 compile:
 	@set -euo pipefail; \
-	find src/applescripts -name '*.applescript' -print | while IFS= read -r file; do \
+	find scripts/applescripts -name '*.applescript' -print | while IFS= read -r file; do \
 		osacompile -o /tmp/$$(echo "$$file" | tr '/' '_' | sed 's/\.applescript$$/.scpt/') "$$file"; \
 	done
 
 test: test-dictionary test-smoke
 
 test-dictionary:
-	@bash tests/dictionary_contract.sh
+	@bash scripts/tests/dictionary_contract.sh
 
 test-smoke:
-	@bash tests/smoke_reminders.sh
+	@bash scripts/tests/smoke_reminders.sh

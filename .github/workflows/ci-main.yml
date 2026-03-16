@@ -55,7 +55,7 @@ jobs:
       - name: Run dictionary contract
         run: |
           set -euo pipefail
-          bash tests/dictionary_contract.sh
+          bash scripts/tests/dictionary_contract.sh
 
   calculate_tag:
     name: Compute next tag
