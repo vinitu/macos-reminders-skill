@@ -1,5 +1,5 @@
 on run argv
-    if (count of argv) is less than 3 then error "Usage: osascript src/applescripts/reminder/move.applescript <source-list> <reminder-name> <target-list>"
+    if (count of argv) is less than 3 then error "Usage: osascript scripts/applescripts/reminder/move.applescript <source-list> <reminder-name> <target-list>"
 
     set sourceListName to item 1 of argv
     set reminderName to item 2 of argv

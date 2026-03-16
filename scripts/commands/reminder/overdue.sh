@@ -16,7 +16,7 @@
 set -euo pipefail
 
 list_name="${1:-}"
-# shellcheck source=src/commands/reminder/_lib/common.sh
+# shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
 if [[ -n "$REMINDCTL_BIN" ]]; then

@@ -1,5 +1,5 @@
 on run argv
-    if (count of argv) is less than 1 then error "Usage: osascript src/applescripts/list/delete.applescript <list-name>"
+    if (count of argv) is less than 1 then error "Usage: osascript scripts/applescripts/list/delete.applescript <list-name>"
 
     set listName to item 1 of argv
 

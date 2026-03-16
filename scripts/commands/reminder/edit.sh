@@ -17,7 +17,7 @@ set -euo pipefail
 id_arg="$2"
 prop="${3}"
 value="$4"
-# shellcheck source=src/commands/reminder/_lib/common.sh
+# shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
 [[ -n "$JQ_BIN" ]] || { echo "jq required" >&2; exit 1; }

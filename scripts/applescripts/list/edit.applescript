@@ -1,5 +1,5 @@
 on run argv
-    if (count of argv) is less than 3 then error "Usage: osascript src/applescripts/list/edit.applescript <list-name> <name|color|emblem> <value>"
+    if (count of argv) is less than 3 then error "Usage: osascript scripts/applescripts/list/edit.applescript <list-name> <name|color|emblem> <value>"
 
     set listName to item 1 of argv
     set propertyName to my normalizeProperty(item 2 of argv)

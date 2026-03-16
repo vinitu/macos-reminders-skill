@@ -17,7 +17,7 @@ set -euo pipefail
 [[ $# -gt 3 ]] && { echo "Usage: $(basename "$0") --id <id> <target-list>" >&2; exit 1; }
 id_arg="$2"
 target_list="$3"
-# shellcheck source=src/commands/reminder/_lib/common.sh
+# shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
 [[ -n "$JQ_BIN" ]] || { echo "jq required" >&2; exit 1; }

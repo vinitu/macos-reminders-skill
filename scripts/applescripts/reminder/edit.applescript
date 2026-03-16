@@ -3,7 +3,7 @@ on run argv
     set args to item 1 of parsedArgs
     set outputFormat to item 2 of parsedArgs
 
-    if (count of args) is less than 4 then error "Usage: osascript src/applescripts/reminder/edit.applescript <list-name> <reminder-name> <property> <value> [--format=plain|json]"
+    if (count of args) is less than 4 then error "Usage: osascript scripts/applescripts/reminder/edit.applescript <list-name> <reminder-name> <property> <value> [--format=plain|json]"
 
     set listName to item 1 of args
     set reminderName to item 2 of args

@@ -3,7 +3,7 @@ on run argv
     set args to item 1 of parsedArgs
     set outputFormat to item 2 of parsedArgs
 
-    if (count of args) is less than 3 then error "Usage: osascript src/applescripts/reminder/get-by-id.applescript <list-name> <reminder-id> <property> [--format=plain|json]"
+    if (count of args) is less than 3 then error "Usage: osascript scripts/applescripts/reminder/get-by-id.applescript <list-name> <reminder-id> <property> [--format=plain|json]"
 
     set listName to item 1 of args
     set reminderId to my trimText(item 2 of args)

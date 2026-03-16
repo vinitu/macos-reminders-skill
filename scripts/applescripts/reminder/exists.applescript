@@ -1,5 +1,5 @@
 on run argv
-    if (count of argv) is less than 2 then error "Usage: osascript src/applescripts/reminder/exists.applescript <list-name> <reminder-name>"
+    if (count of argv) is less than 2 then error "Usage: osascript scripts/applescripts/reminder/exists.applescript <list-name> <reminder-name>"
 
     set listName to item 1 of argv
     set reminderName to item 2 of argv

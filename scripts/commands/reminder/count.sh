@@ -10,7 +10,7 @@ set -euo pipefail
 
 [[ $# -gt 1 ]] && { echo "Usage: $(basename "$0") [list-name]" >&2; exit 1; }
 list_name="${1:-}"
-# shellcheck source=src/commands/reminder/_lib/common.sh
+# shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
 if [[ -n "$REMINDCTL_BIN" ]]; then

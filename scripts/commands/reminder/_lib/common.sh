@@ -10,7 +10,7 @@ HELPER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 [[ -n "$SCRIPT_DIR" ]] || SCRIPT_DIR="$(cd "$HELPER_DIR/.." && pwd)"
 [[ -n "$REPO_ROOT" ]] || REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-[[ -n "$REMINDER_OSA_DIR" ]] || REMINDER_OSA_DIR="$REPO_ROOT/src/applescripts/reminder"
+[[ -n "$REMINDER_OSA_DIR" ]] || REMINDER_OSA_DIR="$REPO_ROOT/scripts/applescripts/reminder"
 [[ -n "$REMINDER_NORMALIZE_JQ" ]] || REMINDER_NORMALIZE_JQ="$SCRIPT_DIR/reminder_normalize.jq"
 
 if [[ -z "$REMINDCTL_BIN" ]]; then

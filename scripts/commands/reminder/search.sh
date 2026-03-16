@@ -18,7 +18,7 @@ set -euo pipefail
 [[ $# -lt 1 ]] && { echo "Usage: $(basename "$0") <exact-name|id|incomplete|priority|has-due-date|text> [args...]" >&2; exit 1; }
 mode="$1"
 shift
-# shellcheck source=src/commands/reminder/_lib/common.sh
+# shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
 if [[ -n "$REMINDCTL_BIN" ]]; then
@@ -48,15 +48,12 @@ if [[ -n "$REMINDCTL_BIN" ]]; then
       printf '%s' "$raw" | "$JQ_BIN" -c '[.[] | select(.isCompleted == false)]' | normalize_reminders_json
       ;;
     priority)
-      pri_num="none"
-      case "$(echo "$pri" | tr '[:upper:]' '[:lower:]')" in
-        none) pri_num=0 ;;
-        low) pri_num=1 ;;
-        medium) pri_num=5 ;;
-        high) pri_num=9 ;;
+      pri_normalized="$(echo "$pri" | tr '[:upper:]' '[:lower:]')"
+      case "$pri_normalized" in
+        none|low|medium|high) ;;
         *) echo "Unsupported priority: $pri" >&2; exit 1 ;;
       esac
-      printf '%s' "$raw" | "$JQ_BIN" -c --argjson p "$pri_num" '[.[] | select(.priority == $p)]' | normalize_reminders_json
+      printf '%s' "$raw" | normalize_reminders_json | "$JQ_BIN" -c --arg p "$pri_normalized" '[.[] | select(.priority == $p)]'
       ;;
     has-due-date)
       printf '%s' "$raw" | "$JQ_BIN" -c '[.[] | select(.dueDate != null and .dueDate != "")]' | normalize_reminders_json
@@ -111,4 +108,4 @@ case "$mode" in
     exit 1
     ;;
 esac
-exec /usr/bin/osascript "$REPO_ROOT/src/applescripts/reminder/search.applescript" "${search_args[@]}"
+exec /usr/bin/osascript "$REPO_ROOT/scripts/applescripts/reminder/search.applescript" "${search_args[@]}"

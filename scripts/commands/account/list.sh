@@ -14,7 +14,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-OSA="$REPO_ROOT/src/applescripts/account"
+OSA="$REPO_ROOT/scripts/applescripts/account"
 
 [[ $# -gt 0 ]] && { echo "Usage: $(basename "$0")" >&2; exit 1; }
 

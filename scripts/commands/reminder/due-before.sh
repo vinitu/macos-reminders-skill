@@ -19,7 +19,7 @@ set -euo pipefail
 [[ $# -gt 2 ]] && { echo "Usage: $(basename "$0") <date> [list-name]" >&2; exit 1; }
 cutoff_date="$1"
 list_name="${2:-}"
-# shellcheck source=src/commands/reminder/_lib/common.sh
+# shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
 if [[ -n "$REMINDCTL_BIN" ]]; then

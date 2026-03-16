@@ -6,4 +6,4 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-exec /usr/bin/osascript "$REPO_ROOT/src/applescripts/reminder/show.applescript" "$@"
+exec /usr/bin/osascript "$REPO_ROOT/scripts/applescripts/reminder/show.applescript" "$@"

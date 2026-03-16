@@ -8,13 +8,13 @@ Installed global skill directory: `~/.agents/skills/macos-reminders`.
 ## Where to start
 
 - Read this file, then `SKILL.md` for the full command list and usage.
-- Run all commands from the **repo root**: `./src/commands/<entity>/<action>.sh` or `src/commands/...`
-- Do not call `src/applescripts` directly; use only `src/commands`.
+- Run all commands from the **repo root**: `./scripts/commands/<entity>/<action>.sh` or `scripts/commands/...`
+- Do not call `scripts/applescripts` directly; use only `scripts/commands`.
 
 ## Goal
 
 - Keep the AppleScript coverage accurate to the live app dictionary.
-- Keep the public `src/commands` interface accurate to the implemented behavior.
+- Keep the public `scripts/commands` interface accurate to the implemented behavior.
 - Prefer runnable examples over long prose.
 - Treat reminder data as real user data.
 
@@ -28,23 +28,23 @@ Installed global skill directory: `~/.agents/skills/macos-reminders`.
 
 - **SKILL.md** — main skill workflow and full command list; update when command coverage changes.
 - **README.md** — repo overview for humans.
-- **src/commands/** — public shell interface (run from repo root).
-- **src/applescripts/account|list|reminder/** — internal AppleScript entrypoints (invoked via `osascript` by the command scripts).
-- **src/commands/reminder/reminder_normalize.jq** — maps remindctl JSON to the reminder shape (priority 0/1/5/9 → "none"/"low"/"medium"/"high"); used by list, today, today-or-overdue, upcoming, due-before, due-range (overdue.sh uses inline jq).
-- **tests/** — live integration checks for Reminders.app.
+- **scripts/commands/** — public shell interface (run from repo root).
+- **scripts/applescripts/account|list|reminder/** — internal AppleScript entrypoints (invoked via `osascript` by the command scripts).
+- **scripts/commands/reminder/reminder_normalize.jq** — maps remindctl JSON to the reminder shape (priority can be `0/1/5/9` or `"none"/"low"/"medium"/"high"`); used by list, today, today-or-overdue, upcoming, due-before, due-range (overdue.sh uses inline jq).
+- **scripts/tests/** — live integration checks for Reminders.app.
 
 ## Example (overdue)
 
 ```bash
-./src/commands/reminder/overdue.sh
-./src/commands/reminder/overdue.sh "Work / Productivity"
+./scripts/commands/reminder/overdue.sh
+./scripts/commands/reminder/overdue.sh "Work / Productivity"
 ```
 
 Pattern: reminder commands try `remindctl` first; if missing, use AppleScript fallback (same JSON contract). With remindctl: get JSON, then `jq` to filter and map via `reminder_normalize.jq` (or inline jq in overdue.sh).
 
 ## Backends
 
-- **account**, **list**: AppleScript only (`osascript` + `src/applescripts/<entity>/*.applescript`). Output is always JSON.
+- **account**, **list**: AppleScript only (`osascript` + `scripts/applescripts/<entity>/*.applescript`). Output is always JSON.
 - **reminder**: prefer `remindctl` + jq; fallback to AppleScript when remindctl is missing (same JSON shape). If remindctl is used and fails → "remindctl failed", exit 1.
 
 ## Reminder JSON shape
@@ -65,7 +65,7 @@ Example array: `[{"id":"...","name":"Task","list":"List","body":null,"completed"
 
 ## Do not
 
-- Call `src/applescripts` from skill instructions; use only `src/commands`.
+- Call `scripts/applescripts` from skill instructions; use only `scripts/commands`.
 - Claim support for a feature unless it is in the app dictionary or verified with `osascript` / `remindctl`.
 - Leave temporary data: use the `CodexTest_` prefix and always clean up test reminders and lists.
 
@@ -73,7 +73,7 @@ Example array: `[{"id":"...","name":"Task","list":"List","body":null,"completed"
 
 - Keep docs in simple English.
 - Update **SKILL.md** when command coverage changes.
-- Keep **SKILL.md** and **README.md** about the public `src/commands` interface, not internal backends.
+- Keep **SKILL.md** and **README.md** about the public `scripts/commands` interface, not internal backends.
 - Call out "declared by the standard suite" vs "verified in Reminders" when relevant.
 
 ## Validation

@@ -1,5 +1,5 @@
 on run argv
-    if (count of argv) is less than 1 then error "Usage: osascript src/applescripts/list/create.applescript <list-name> [color|missing] [emblem|missing]"
+    if (count of argv) is less than 1 then error "Usage: osascript scripts/applescripts/list/create.applescript <list-name> [color|missing] [emblem|missing]"
 
     set listName to item 1 of argv
     set colorValue to missing value

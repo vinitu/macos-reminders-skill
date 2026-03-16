@@ -1,5 +1,5 @@
 on run argv
-    if (count of argv) is less than 1 then error "Usage: osascript src/applescripts/account/show.applescript <account-name>"
+    if (count of argv) is less than 1 then error "Usage: osascript scripts/applescripts/account/show.applescript <account-name>"
 
     set accountName to item 1 of argv
 

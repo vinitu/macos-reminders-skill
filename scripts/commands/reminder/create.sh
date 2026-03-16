@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
     *) body="$1"; shift ;;
   esac
 done
-# shellcheck source=src/commands/reminder/_lib/common.sh
+# shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
 if [[ -n "$REMINDCTL_BIN" ]]; then
@@ -43,7 +43,7 @@ if [[ -n "$REMINDCTL_BIN" ]]; then
     (first_reminder) as $r |
     ($r | if .notes != null and .notes != "" then .notes else $body end) as $b |
     {id: $r.id, name: ($r.title // $r.name), list: ($r.listName // $r.list), body: (if $b != "" then $b else null end), completed: ($r.isCompleted // false),
-     priority: (if $r.priority == null then "none" elif $r.priority == 0 then "none" elif $r.priority == 1 then "low" elif $r.priority == 5 then "medium" elif $r.priority == 9 then "high" else "none" end),
+     priority: (if $r.priority == null then "none" elif $r.priority == 0 or $r.priority == "none" then "none" elif $r.priority == 1 or $r.priority == "low" then "low" elif $r.priority == 5 or $r.priority == "medium" then "medium" elif $r.priority == 9 or $r.priority == "high" then "high" else "none" end),
      due_date: $r.dueDate}
   '
   exit 0

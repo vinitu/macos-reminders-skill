@@ -22,7 +22,7 @@ set -euo pipefail
 [[ $# -lt 2 || "$1" != "--id" ]] && { echo "Usage: $(basename "$0") --id <id> [property]" >&2; exit 1; }
 id_arg="$2"
 property="${3:-}"
-# shellcheck source=src/commands/reminder/_lib/common.sh
+# shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
 if [[ -n "$REMINDCTL_BIN" ]]; then
