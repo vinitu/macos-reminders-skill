@@ -40,12 +40,12 @@ Installed global skill directory: `~/.agents/skills/macos-reminders`.
 ./scripts/commands/reminder/overdue.sh "Work / Productivity"
 ```
 
-Pattern: reminder commands try `remindctl` first; if missing, use AppleScript fallback (same JSON contract). With remindctl: get JSON, then `jq` to filter and map via `reminder_normalize.jq` (or inline jq in overdue.sh).
+Pattern: reminder commands may try `remindctl` first for speed, but the required functional backend is AppleScript + ReminderKit (same JSON contract). With remindctl: get JSON, then `jq` to filter and map via `reminder_normalize.jq` (or inline jq in overdue.sh).
 
 ## Backends
 
 - **account**, **list**: AppleScript only (`osascript` + `scripts/applescripts/<entity>/*.applescript`). Output is always JSON.
-- **reminder**: prefer `remindctl` + jq; fallback to AppleScript when remindctl is missing (same JSON shape). If remindctl is used and fails → "remindctl failed", exit 1.
+- **reminder**: `remindctl` is optional and used only as a fast path. Required fallback is AppleScript + ReminderKit with the same JSON shape. If `remindctl` is missing or fails, reminder commands must continue through the fallback path.
 
 ## Reminder JSON shape
 
@@ -80,5 +80,5 @@ Example array: `[{"id":"...","name":"Task","list":"List","body":null,"completed"
 
 - After AppleScript or command changes: `make compile` then `make test`.
 - Useful targets: `dictionary-reminders`, `dictionary-standard`, `compile`, `test`.
-- Smoke tests (`test-smoke`) require Reminders.app (and optionally `remindctl`); they can be slow.
+- Smoke tests (`test-smoke`) require Reminders.app and may use `remindctl` when available; they can be slow.
 - Reminders automation may need **Reminders** or **Full Disk Access** (System Settings → Privacy & Security). Document TCC or app-state blocks clearly.

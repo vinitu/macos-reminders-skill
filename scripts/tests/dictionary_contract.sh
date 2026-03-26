@@ -29,6 +29,7 @@ has_pattern '<property name="default account"' "$tmp_reminders"
 has_pattern '<property name="default list"' "$tmp_reminders"
 has_pattern '<property name="due date"' "$tmp_reminders"
 has_pattern '<property name="flagged"' "$tmp_reminders"
+has_pattern '<property name="container"' "$tmp_reminders"
 
 has_pattern '<command name="count"' "$tmp_standard"
 has_pattern '<command name="delete"' "$tmp_standard"

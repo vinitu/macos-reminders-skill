@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Output: JSON (completed reminder in AGENTS.md shape).
-# Prefer: remindctl + jq. Fallback: AppleScript when remindctl is missing.
+# Prefer: remindctl + jq for speed. Fallback: AppleScript + ReminderKit when remindctl is unavailable or fails.
 # Example:
 #   {
 #     "id": "...",
@@ -21,16 +21,16 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
 [[ -n "$JQ_BIN" ]] || { echo "jq required" >&2; exit 1; }
 
-if [[ -n "$REMINDCTL_BIN" ]]; then
-  raw=$(remindctl_show_all_json)
+if raw=$(try_remindctl_show_all_json); then
   resolved=$(resolve_reminder_id "$id_arg" <<< "$raw")
-  out=$(run_remindctl_json complete "$resolved")
-  printf '%s' "$out" | normalize_single_reminder_json
-  exit 0
+  if out=$(try_run_remindctl_json complete "$resolved"); then
+    printf '%s' "$out" | normalize_single_reminder_json | augment_reminders_json
+    exit 0
+  fi
 fi
 
 reminder_json=$(load_reminder_by_id_or_error "$id_arg")
 list_name=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.list')
 reminder_name=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.name')
 run_reminder_applescript complete.applescript "$list_name" "$reminder_name" >/dev/null
-printf '%s' "$reminder_json" | "$JQ_BIN" -c '.completed = true'
+run_reminder_applescript get-reminder-by-id.applescript "$id_arg" | augment_reminders_json

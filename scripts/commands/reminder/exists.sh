@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Output: JSON {exists, id}.
-# Prefer: remindctl + jq. Fallback: AppleScript when remindctl is missing.
+# Prefer: remindctl + jq for speed. Fallback: AppleScript + ReminderKit when remindctl is unavailable or fails.
 # Example (found):
 #   {
 #     "exists": true,
@@ -19,9 +19,8 @@ id_arg="$2"
 # shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
-if [[ -n "$REMINDCTL_BIN" ]]; then
+if raw=$(try_remindctl_show_all_json); then
   [[ -n "$JQ_BIN" ]] || { echo "jq required when using remindctl" >&2; exit 1; }
-  raw=$(remindctl_show_all_json)
   matches=$(find_reminder_matches_json "$id_arg" <<< "$raw")
   count=$(printf '%s' "$matches" | "$JQ_BIN" 'length')
   if [[ "$count" -gt 1 ]]; then
@@ -37,7 +36,7 @@ if [[ -n "$REMINDCTL_BIN" ]]; then
   exit 0
 fi
 
-out=$(run_reminder_applescript get-reminder-by-id.applescript "$id_arg" 2>/dev/null) || true
+out=$(run_reminderkit_helper get "$id_arg" 2>/dev/null) || true
 if [[ -n "$out" ]] && [[ -n "$JQ_BIN" ]] && printf '%s' "$out" | "$JQ_BIN" -e '.id' >/dev/null 2>&1; then
   full_id=$(printf '%s' "$out" | "$JQ_BIN" -r '.id')
   "$JQ_BIN" -n --arg id "$full_id" '{exists: true, id: $id}'

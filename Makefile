@@ -16,7 +16,8 @@ compile:
 	@set -euo pipefail; \
 	find scripts/applescripts -name '*.applescript' -print | while IFS= read -r file; do \
 		osacompile -o /tmp/$$(echo "$$file" | tr '/' '_' | sed 's/\.applescript$$/.scpt/') "$$file"; \
-	done
+	done; \
+	clang -framework Foundation -o /tmp/macos-reminders-skill-reminderkit-helper scripts/tools/reminderkit_helper.m
 
 test: test-dictionary test-smoke
 

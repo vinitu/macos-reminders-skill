@@ -12,6 +12,8 @@ filter_list="${prefix}_filters"
 extra_list="${prefix}_extra"
 reminder_name="${prefix}_reminder"
 wrapper_reminder_name="${prefix}_wrapper"
+subtask_parent_name="${prefix}_parent"
+subtask_child_name="${prefix}_child"
 today_reminder="${prefix}_today"
 today_completed_reminder="${prefix}_today_completed"
 overdue_reminder="${prefix}_overdue"
@@ -90,14 +92,20 @@ wait_for_list() {
   local attempt=0
 
   while [[ "$attempt" -lt 20 ]]; do
-    if json_matches "$("$REMINDCTL_BIN" list --json --no-color --no-input)" 'payload.some(item => item.title === "'"$list_name"'")'; then
-      return
+    if [[ -n "$REMINDCTL_BIN" ]]; then
+      if json_matches "$("$REMINDCTL_BIN" list --json --no-color --no-input)" 'payload.some(item => item.title === "'"$list_name"'")'; then
+        return
+      fi
+    else
+      if [[ "$(json_get "$(scripts/commands/list/exists.sh "$list_name")" 'payload.exists')" == "true" ]]; then
+        return
+      fi
     fi
     attempt=$((attempt + 1))
     sleep 1
   done
 
-  printf 'smoke_reminders: remindctl did not observe list: %s\n' "$list_name" >&2
+  printf 'smoke_reminders: list did not become visible: %s\n' "$list_name" >&2
   exit 1
 }
 
@@ -114,11 +122,12 @@ APPLESCRIPT
 trap cleanup EXIT
 
 osascript -e 'tell application "Reminders" to version' >/dev/null
-[[ -n "$REMINDCTL_BIN" ]] || { printf 'smoke_reminders: remindctl is not available\n' >&2; exit 1; }
-status_output="$("$REMINDCTL_BIN" status)"
-if [[ "$status_output" != *"access"* && "$status_output" != *"Access"* ]]; then
-  printf 'smoke_reminders: remindctl status is unexpected: %s\n' "$status_output" >&2
-  exit 1
+if [[ -n "$REMINDCTL_BIN" ]]; then
+  status_output="$("$REMINDCTL_BIN" status)"
+  if [[ "$status_output" != *"access"* && "$status_output" != *"Access"* ]]; then
+    printf 'smoke_reminders: remindctl status is unexpected: %s\n' "$status_output" >&2
+    exit 1
+  fi
 fi
 
 while IFS= read -r file; do
@@ -200,23 +209,32 @@ fi
 list_delete_json="$(scripts/commands/list/delete.sh "${extra_list}_renamed")"
 json_assert "$list_delete_json" 'payload.deleted === true && payload.name === "'"${extra_list}_renamed"'"' "list delete json is invalid"
 
-create_json="$(scripts/commands/reminder/create.sh "$source_list" "$reminder_name" "Smoke body" --priority high)"
+create_json="$(env REMINDCTL_BIN=/nonexistent scripts/commands/reminder/create.sh "$source_list" "$reminder_name" "Smoke body" --priority high --flagged)"
 reminder_id="$(json_get "$create_json" 'payload.id')"
-json_assert "$create_json" 'payload != null && payload.id !== null && payload.name === "'"$reminder_name"'" && payload.list' "reminder create json is invalid"
+json_assert "$create_json" 'payload != null && payload.id !== null && payload.name === "'"$reminder_name"'" && payload.list && payload.flagged === true && payload.urgent === false && payload.parent_id === null && payload.parent_name === null' "reminder create json is invalid"
 
 wrapper_create_json="$(scripts/commands/reminder/create.sh "$source_list" "$wrapper_reminder_name" "Wrapper body" --priority low)"
 wrapper_id="$(json_get "$wrapper_create_json" 'payload.id')"
+json_assert "$wrapper_create_json" 'payload.flagged === false && payload.urgent === false && payload.parent_id === null && payload.parent_name === null' "wrapper reminder create json is invalid"
+
+subtask_parent_json="$(scripts/commands/reminder/create.sh "$source_list" "$subtask_parent_name" "Parent body")"
+subtask_parent_id="$(json_get "$subtask_parent_json" 'payload.id')"
+json_assert "$subtask_parent_json" 'payload.parent_id === null && payload.parent_name === null' "subtask parent create json is invalid"
+
+subtask_child_json="$(scripts/commands/reminder/create.sh "$source_list" "$subtask_child_name" "Child body" --parent-id "$subtask_parent_id" --urgent)"
+subtask_child_id="$(json_get "$subtask_child_json" 'payload.id')"
+json_assert "$subtask_child_json" 'payload.id !== null && payload.urgent === true && payload.parent_id === "'"$subtask_parent_id"'" && payload.parent_name === "'"$subtask_parent_name"'"' "subtask create json is invalid"
 
 reminder_list_json="$(scripts/commands/reminder/list.sh "$source_list")"
-json_assert "$reminder_list_json" 'payload.some(item => item.id === "'"$reminder_id"'") && payload.some(item => item.id === "'"$wrapper_id"'")' "reminder list json is missing created reminders"
+json_assert "$reminder_list_json" 'payload.some(item => item.id === "'"$reminder_id"'") && payload.some(item => item.id === "'"$wrapper_id"'") && payload.some(item => item.id === "'"$subtask_parent_id"'") && payload.some(item => item.id === "'"$subtask_child_id"'")' "reminder list json is missing created reminders"
 
 count_json="$(scripts/commands/reminder/count.sh "$source_list")"
 source_count="$(json_get "$count_json" 'payload.count')"
-if [[ "$source_count" != "2" ]]; then
+if [[ "$source_count" != "4" ]]; then
   printf 'smoke_reminders: reminder count is unexpected: %s\n' "$source_count" >&2
   exit 1
 fi
-json_assert "$count_json" 'payload.count === 2 && payload.list === "'"$source_list"'"' "reminder count json is invalid"
+json_assert "$count_json" 'payload.count === 4 && payload.list === "'"$source_list"'"' "reminder count json is invalid"
 
 get_body_json="$(scripts/commands/reminder/get.sh --id "$reminder_id" body)"
 reminder_body="$(json_get "$get_body_json" 'payload.value')"
@@ -225,6 +243,12 @@ if [[ "$reminder_body" != "Smoke body" ]]; then
   exit 1
 fi
 json_assert "$get_body_json" 'payload.id === "'"$reminder_id"'" && payload.property === "body" && payload.value === "Smoke body"' "reminder get json is invalid"
+
+get_flagged_json="$(scripts/commands/reminder/get.sh --id "$reminder_id" flagged)"
+json_assert "$get_flagged_json" 'payload.id === "'"$reminder_id"'" && payload.property === "flagged" && payload.value === true' "reminder flagged get json is invalid"
+
+get_urgent_json="$(scripts/commands/reminder/get.sh --id "$subtask_child_id" urgent)"
+json_assert "$get_urgent_json" 'payload.id === "'"$subtask_child_id"'" && payload.property === "urgent" && payload.value === true' "reminder urgent get json is invalid"
 
 get_wrapper_json="$(scripts/commands/reminder/get-by-id.sh "$wrapper_id" body)"
 wrapper_body="$(json_get "$get_wrapper_json" 'payload.value')"
@@ -244,6 +268,20 @@ scripts/commands/reminder/edit-by-id.sh "$wrapper_id" priority medium >/dev/null
 wrapper_priority="$(json_get "$(scripts/commands/reminder/get.sh --id "$wrapper_id" priority)" 'payload.value')"
 if [[ "$wrapper_priority" != "medium" ]]; then
   printf 'smoke_reminders: reminder edit-by-id did not update priority: %s\n' "$wrapper_priority" >&2
+  exit 1
+fi
+
+scripts/commands/reminder/edit.sh --id "$wrapper_id" flagged true >/dev/null
+wrapper_flagged="$(json_get "$(scripts/commands/reminder/get.sh --id "$wrapper_id" flagged)" 'payload.value')"
+if [[ "$wrapper_flagged" != "true" ]]; then
+  printf 'smoke_reminders: reminder flagged edit did not update flag: %s\n' "$wrapper_flagged" >&2
+  exit 1
+fi
+
+scripts/commands/reminder/edit.sh --id "$wrapper_id" urgent true >/dev/null
+wrapper_urgent="$(json_get "$(scripts/commands/reminder/get.sh --id "$wrapper_id" urgent)" 'payload.value')"
+if [[ "$wrapper_urgent" != "true" ]]; then
+  printf 'smoke_reminders: reminder urgent edit did not update flag: %s\n' "$wrapper_urgent" >&2
   exit 1
 fi
 
@@ -353,6 +391,21 @@ json_assert "$focus_json" 'payload.map(item => item.id).sort().join(",") === ["'
 
 search_priority_json="$(scripts/commands/reminder/search.sh priority high "$filter_list")"
 json_assert "$search_priority_json" 'payload.length === 1 && payload[0].id === "'"$today_id"'"' "priority search is unexpected"
+
+search_flagged_json="$(scripts/commands/reminder/search.sh flagged "$source_list")"
+json_assert "$search_flagged_json" 'payload.length === 2 && payload.some(item => item.id === "'"$reminder_id"'") && payload.some(item => item.id === "'"$wrapper_id"'")' "flagged search is unexpected"
+
+search_urgent_json="$(scripts/commands/reminder/search.sh urgent "$source_list")"
+json_assert "$search_urgent_json" 'payload.length === 2 && payload.some(item => item.id === "'"$wrapper_id"'") && payload.some(item => item.id === "'"$subtask_child_id"'")' "urgent search is unexpected"
+
+search_nested_json="$(scripts/commands/reminder/search.sh nested "$source_list")"
+json_assert "$search_nested_json" 'payload.length === 1 && payload[0].id === "'"$subtask_child_id"'" && payload[0].parent_id === "'"$subtask_parent_id"'"' "nested search is unexpected"
+
+search_top_level_json="$(scripts/commands/reminder/search.sh top-level "$source_list")"
+json_assert "$search_top_level_json" 'payload.length === 3 && payload.every(item => item.parent_id === null && item.parent_name === null)' "top-level search is unexpected"
+
+search_parent_json="$(scripts/commands/reminder/search.sh parent-id "$subtask_parent_id" "$source_list")"
+json_assert "$search_parent_json" 'payload.length === 1 && payload[0].id === "'"$subtask_child_id"'"' "parent-id search is unexpected"
 
 search_due_json="$(scripts/commands/reminder/search.sh has-due-date "$filter_list")"
 json_assert "$search_due_json" 'payload.some(item => item.name === "'"$today_reminder"'") && payload.some(item => item.name === "'"$upcoming_reminder"'")' "has-due-date search is missing reminders"

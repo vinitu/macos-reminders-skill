@@ -16,10 +16,13 @@ Do not call `scripts/applescripts` directly.
 
 - macOS with Reminders.app access
 - `jq`
-- `remindctl` for the preferred reminder backend
+- ReminderKit helper support through the local macOS private frameworks
+- `remindctl` only as an optional fast path
 
 Account and list commands use AppleScript wrappers and still need `jq` to build JSON output.
-Reminder commands prefer `remindctl` and `jq`. They try `remindctl` from `PATH`, then `/opt/homebrew/bin/remindctl`, and use AppleScript fallback only when `remindctl` is not available.
+Reminder commands must keep working without `remindctl`.
+Reminder commands try `remindctl` from `PATH`, then `/opt/homebrew/bin/remindctl`, but only as an optimization.
+If `remindctl` is missing or a reminder command fails through it, the command falls back to AppleScript + ReminderKit.
 
 Check `remindctl` access with:
 
@@ -141,7 +144,7 @@ scripts/commands/list/show.sh "Inbox"
 
 ## Reminders
 
-Use the `remindctl` reminder ID or a unique ID prefix as the public reminder identity.
+Use the reminder UUID or a unique UUID prefix as the public reminder identity.
 Prefer `--id` for reminder read and write commands.
 
 List and count:
@@ -169,6 +172,9 @@ Create:
 ```bash
 scripts/commands/reminder/create.sh "Inbox" "Buy milk"
 scripts/commands/reminder/create.sh "Inbox" "Buy milk" "2 liters" --priority high
+scripts/commands/reminder/create.sh "Inbox" "Buy milk" --flagged
+scripts/commands/reminder/create.sh "Inbox" "Buy milk" --urgent
+scripts/commands/reminder/create.sh "Inbox" "Buy milk" --parent-id "PARENT-ID"
 scripts/commands/reminder/create.sh "Inbox" "Buy milk" --due "2026-03-14 10:00"
 ```
 
@@ -177,6 +183,9 @@ Read:
 ```bash
 scripts/commands/reminder/get.sh --id "REMINDER-ID"
 scripts/commands/reminder/get.sh --id "REMINDER-ID" body
+scripts/commands/reminder/get.sh --id "REMINDER-ID" flagged
+scripts/commands/reminder/get.sh --id "REMINDER-ID" urgent
+scripts/commands/reminder/get.sh --id "REMINDER-ID" parent_id
 scripts/commands/reminder/get-by-id.sh "REMINDER-ID" priority
 ```
 
@@ -185,6 +194,9 @@ Edit, move, complete, and delete:
 ```bash
 scripts/commands/reminder/edit.sh --id "REMINDER-ID" body "3 liters"
 scripts/commands/reminder/edit.sh --id "REMINDER-ID" due_date "missing"
+scripts/commands/reminder/edit.sh --id "REMINDER-ID" flagged true
+scripts/commands/reminder/edit.sh --id "REMINDER-ID" urgent true
+scripts/commands/reminder/edit.sh --id "REMINDER-ID" parent_id "PARENT-ID"
 scripts/commands/reminder/edit-by-id.sh "REMINDER-ID" priority medium
 scripts/commands/reminder/reschedule.sh --id "REMINDER-ID" "2030-01-15"
 scripts/commands/reminder/reschedule-by-id.sh "REMINDER-ID" "2030-01-15 12:00"
@@ -203,9 +215,25 @@ scripts/commands/reminder/search.sh exact-name "Inbox" "Buy milk"
 scripts/commands/reminder/search.sh id "REMINDER-ID"
 scripts/commands/reminder/search.sh incomplete "Inbox"
 scripts/commands/reminder/search.sh priority high "Inbox"
+scripts/commands/reminder/search.sh flagged "Inbox"
+scripts/commands/reminder/search.sh urgent "Inbox"
+scripts/commands/reminder/search.sh nested "Inbox"
+scripts/commands/reminder/search.sh top-level "Inbox"
+scripts/commands/reminder/search.sh parent-id "PARENT-ID" "Inbox"
 scripts/commands/reminder/search.sh has-due-date "Inbox"
 scripts/commands/reminder/search.sh text "milk" "Inbox"
 ```
+
+Nested reminder metadata is public as `parent_id` and `parent_name`.
+Nested reminder writes are public through `create.sh --parent-id` and `edit.sh parent_id`.
+`urgent` is public and is backed by ReminderKit, not by AppleScript or `remindctl`.
+
+Backend policy:
+
+- `remindctl` only accelerates reminder commands
+- AppleScript + ReminderKit is the required fallback path
+- Missing `remindctl` must not break the public reminder interface
+- Failing `remindctl` calls must not break the public reminder interface
 
 ## JSON Contract
 
@@ -233,6 +261,10 @@ Reminder object:
 - `completed`
 - `priority`
 - `due_date`
+- `flagged`
+- `urgent`
+- `parent_id`
+- `parent_name`
 
 Reminder priority values:
 
@@ -254,7 +286,6 @@ Scalar envelopes:
 These reminder features are not part of the public interface:
 
 - `show`
-- `flagged`
 - `container`
 - `creation_date`
 - `modification_date`

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Output: always JSON (array of reminders due in the date range).
-# Prefer: remindctl + jq. Fallback: AppleScript when remindctl is missing.
+# Prefer: remindctl + jq for speed. Fallback: AppleScript + ReminderKit when remindctl is unavailable or fails.
 # Example:
 # [
 #   {
@@ -23,10 +23,9 @@ list_name="${3:-}"
 # shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
-if [[ -n "$REMINDCTL_BIN" ]]; then
+if raw=$(try_remindctl_all_or_list_json "$list_name"); then
   [[ -n "$JQ_BIN" ]] || { echo "jq required when using remindctl" >&2; exit 1; }
-  raw=$(remindctl_all_or_list_json "$list_name")
-  normalize_reminders_json <<< "$raw" | "$JQ_BIN" --arg start "$start_date" --arg end "$end_date" '
+  normalize_reminders_json <<< "$raw" | augment_reminders_json | "$JQ_BIN" --arg start "$start_date" --arg end "$end_date" '
     def local_due_date:
       try (fromdateiso8601 | strflocaltime("%Y-%m-%d"))
       catch .[0:10];
@@ -35,4 +34,8 @@ if [[ -n "$REMINDCTL_BIN" ]]; then
   exit 0
 fi
 
-exec_reminder_applescript_optional_last_arg due-range.applescript "$list_name" "$start_date" "$end_date"
+if [[ -n "$list_name" ]]; then
+  run_reminder_applescript due-range.applescript "$start_date" "$end_date" "$list_name" | augment_reminders_json
+else
+  run_reminder_applescript due-range.applescript "$start_date" "$end_date" | augment_reminders_json
+fi
