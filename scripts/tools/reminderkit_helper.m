@@ -363,6 +363,38 @@ static void commandSearchExactName(int argc, const char **argv) {
     printJSON(items);
 }
 
+static void commandChildren(int argc, const char **argv) {
+    if (argc < 3 || argc > 4) fail(@"Usage: reminderkit_helper children <parent-id> [list-name]");
+
+    NSString *parentID = [NSString stringWithUTF8String:argv[2]];
+    NSString *listName = argc == 4 ? [NSString stringWithUTF8String:argv[3]] : nil;
+    id store = reminderStore();
+    NSError *error = nil;
+    id reminders = ((id(*)(id, SEL, id, id, id, id, id, id, NSError **))objc_msgSend)(
+        store,
+        sel_registerName("fetchRemindersMatchingTitle:dueAfter:dueBefore:isCompleted:hasLocation:location:error:"),
+        nil,
+        nil,
+        nil,
+        nil,
+        nil,
+        nil,
+        &error
+    );
+    if (!reminders && error) fail(error.localizedDescription);
+
+    NSMutableArray *items = [NSMutableArray array];
+    for (id reminder in reminders) {
+        NSString *reminderListName = stringFromObject(send0(send0(reminder, "list"), "name"));
+        NSString *reminderParentID = uuidStringFromReminderObjectID(send0(reminder, "parentReminderID"));
+        if (reminderParentID && [reminderParentID isEqualToString:parentID] && (!listName || [reminderListName isEqualToString:listName])) {
+            [items addObject:normalizedReminder(reminder)];
+        }
+    }
+
+    printJSON(items);
+}
+
 static void commandSetUrgent(int argc, const char **argv) {
     if (argc != 4) fail(@"Usage: reminderkit_helper set-urgent <id> <true|false>");
 
@@ -436,6 +468,27 @@ static void commandSetPriority(int argc, const char **argv) {
     printJSON(@{@"id": uuidString, @"priority": priorityLabel(priority)});
 }
 
+static void commandDelete(int argc, const char **argv) {
+    if (argc != 3) fail(@"Usage: reminderkit_helper delete <id>");
+
+    NSString *uuidString = [NSString stringWithUTF8String:argv[2]];
+
+    id store = reminderStore();
+    NSError *error = nil;
+    id reminder = fetchReminderByUUID(store, uuidString, &error);
+    if (!reminder) fail(error ? error.localizedDescription : @"Reminder not found");
+
+    id saveRequest = saveRequestForStore(store);
+    id reminderChange = send1(saveRequest, "updateReminder:", reminder);
+    send0(reminderChange, "removeFromList");
+
+    if (!sendBoolError(saveRequest, "saveSynchronouslyWithError:", &error)) {
+        fail(error ? error.localizedDescription : @"Failed to delete reminder");
+    }
+
+    printJSON(@{@"deleted": @YES, @"id": uuidString});
+}
+
 static void commandReparent(int argc, const char **argv) {
     if (argc != 4) fail(@"Usage: reminderkit_helper reparent <child-id> <parent-id>");
 
@@ -470,7 +523,7 @@ int main(int argc, const char **argv) {
         dlopen("/System/Library/PrivateFrameworks/ReminderKit.framework/ReminderKit", RTLD_NOW);
         dlopen("/System/Library/PrivateFrameworks/ReminderKitInternal.framework/ReminderKitInternal", RTLD_NOW);
 
-        if (argc < 2) fail(@"Usage: reminderkit_helper <metadata|get|default-list-name|create|search-exact-name|set-flagged|set-priority|set-urgent|reparent> ...");
+        if (argc < 2) fail(@"Usage: reminderkit_helper <metadata|get|default-list-name|create|search-exact-name|children|set-flagged|set-priority|set-urgent|delete|reparent> ...");
 
         NSString *command = [NSString stringWithUTF8String:argv[1]];
         if ([command isEqualToString:@"metadata"]) {
@@ -493,6 +546,10 @@ int main(int argc, const char **argv) {
             commandSearchExactName(argc, argv);
             return 0;
         }
+        if ([command isEqualToString:@"children"]) {
+            commandChildren(argc, argv);
+            return 0;
+        }
         if ([command isEqualToString:@"set-urgent"]) {
             commandSetUrgent(argc, argv);
             return 0;
@@ -503,6 +560,10 @@ int main(int argc, const char **argv) {
         }
         if ([command isEqualToString:@"set-priority"]) {
             commandSetPriority(argc, argv);
+            return 0;
+        }
+        if ([command isEqualToString:@"delete"]) {
+            commandDelete(argc, argv);
             return 0;
         }
         if ([command isEqualToString:@"reparent"]) {

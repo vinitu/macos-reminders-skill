@@ -211,11 +211,11 @@ json_assert "$list_delete_json" 'payload.deleted === true && payload.name === "'
 
 create_json="$(env REMINDCTL_BIN=/nonexistent scripts/commands/reminder/create.sh "$source_list" "$reminder_name" "Smoke body" --priority high --flagged)"
 reminder_id="$(json_get "$create_json" 'payload.id')"
-json_assert "$create_json" 'payload != null && payload.id !== null && payload.name === "'"$reminder_name"'" && payload.list && payload.flagged === true && payload.urgent === false && payload.parent_id === null && payload.parent_name === null' "reminder create json is invalid"
+json_assert "$create_json" 'payload != null && payload.id !== null && payload.name === "'"$reminder_name"'" && payload.list && payload.priority === "high" && payload.flagged === true && payload.urgent === false && payload.parent_id === null && payload.parent_name === null' "reminder create json is invalid"
 
 wrapper_create_json="$(scripts/commands/reminder/create.sh "$source_list" "$wrapper_reminder_name" "Wrapper body" --priority low)"
 wrapper_id="$(json_get "$wrapper_create_json" 'payload.id')"
-json_assert "$wrapper_create_json" 'payload.flagged === false && payload.urgent === false && payload.parent_id === null && payload.parent_name === null' "wrapper reminder create json is invalid"
+json_assert "$wrapper_create_json" 'payload.priority === "low" && payload.flagged === false && payload.urgent === false && payload.parent_id === null && payload.parent_name === null' "wrapper reminder create json is invalid"
 
 subtask_parent_json="$(scripts/commands/reminder/create.sh "$source_list" "$subtask_parent_name" "Parent body")"
 subtask_parent_id="$(json_get "$subtask_parent_json" 'payload.id')"
@@ -246,6 +246,12 @@ json_assert "$get_body_json" 'payload.id === "'"$reminder_id"'" && payload.prope
 
 get_flagged_json="$(scripts/commands/reminder/get.sh --id "$reminder_id" flagged)"
 json_assert "$get_flagged_json" 'payload.id === "'"$reminder_id"'" && payload.property === "flagged" && payload.value === true' "reminder flagged get json is invalid"
+
+get_priority_fallback_json="$(env REMINDCTL_BIN=/nonexistent scripts/commands/reminder/get.sh --id "$reminder_id" priority)"
+json_assert "$get_priority_fallback_json" 'payload.id === "'"$reminder_id"'" && payload.property === "priority" && payload.value === "high"' "fallback reminder priority get json is invalid"
+
+get_priority_fast_json="$(scripts/commands/reminder/get.sh --id "$wrapper_id" priority)"
+json_assert "$get_priority_fast_json" 'payload.id === "'"$wrapper_id"'" && payload.property === "priority" && payload.value === "low"' "fast-path reminder priority get json is invalid"
 
 get_urgent_json="$(scripts/commands/reminder/get.sh --id "$subtask_child_id" urgent)"
 json_assert "$get_urgent_json" 'payload.id === "'"$subtask_child_id"'" && payload.property === "urgent" && payload.value === true' "reminder urgent get json is invalid"
@@ -299,6 +305,34 @@ json_assert "$search_exact_json" 'payload.length === 1 && payload[0].id === "'"$
 
 search_incomplete_json="$(scripts/commands/reminder/search.sh incomplete "$source_list")"
 json_assert "$search_incomplete_json" 'payload.length >= 2 && payload.some(item => item.name === "'"$reminder_name"'") && payload.some(item => item.name === "'"$wrapper_reminder_name"'")' "incomplete search is missing reminders"
+
+search_flagged_json="$(scripts/commands/reminder/search.sh flagged "$source_list")"
+json_assert "$search_flagged_json" 'payload.length === 2 && payload.some(item => item.id === "'"$reminder_id"'") && payload.some(item => item.id === "'"$wrapper_id"'")' "flagged search is unexpected"
+
+search_urgent_json="$(scripts/commands/reminder/search.sh urgent "$source_list")"
+json_assert "$search_urgent_json" 'payload.length === 2 && payload.some(item => item.id === "'"$wrapper_id"'") && payload.some(item => item.id === "'"$subtask_child_id"'")' "urgent search is unexpected"
+
+search_nested_json="$(scripts/commands/reminder/search.sh nested "$source_list")"
+json_assert "$search_nested_json" 'payload.length === 1 && payload[0].id === "'"$subtask_child_id"'" && payload[0].parent_id === "'"$subtask_parent_id"'"' "nested search is unexpected"
+
+search_top_level_json="$(scripts/commands/reminder/search.sh top-level "$source_list")"
+json_assert "$search_top_level_json" 'payload.length === 3 && payload.every(item => item.parent_id === null && item.parent_name === null)' "top-level search is unexpected"
+
+search_parent_json="$(scripts/commands/reminder/search.sh parent-id "$subtask_parent_id" "$source_list")"
+json_assert "$search_parent_json" 'payload.length === 1 && payload[0].id === "'"$subtask_child_id"'"' "parent-id search is unexpected"
+
+detached_child_json="$(scripts/commands/reminder/edit.sh --id "$subtask_child_id" parent_id missing)"
+detached_child_id="$(json_get "$detached_child_json" 'payload.id')"
+json_assert "$detached_child_json" 'payload.name === "'"$subtask_child_name"'" && payload.parent_id === null && payload.parent_name === null' "subtask detach is unexpected"
+
+search_nested_after_detach_json="$(scripts/commands/reminder/search.sh nested "$source_list")"
+json_assert "$search_nested_after_detach_json" 'payload.length === 0' "nested search after detach is unexpected"
+
+search_parent_after_detach_json="$(scripts/commands/reminder/search.sh parent-id "$subtask_parent_id" "$source_list")"
+json_assert "$search_parent_after_detach_json" 'payload.length === 0' "parent-id search after detach is unexpected"
+
+search_top_level_after_detach_json="$(scripts/commands/reminder/search.sh top-level "$source_list")"
+json_assert "$search_top_level_after_detach_json" 'payload.length === 4 && payload.some(item => item.id === "'"$detached_child_id"'") && payload.every(item => item.parent_id === null && item.parent_name === null)' "top-level search after detach is unexpected"
 
 scripts/commands/reminder/move.sh --id "$reminder_id" "$target_list" >/dev/null
 moved_list="$(json_get "$(scripts/commands/reminder/get.sh --id "$reminder_id" list)" 'payload.value')"
@@ -391,21 +425,6 @@ json_assert "$focus_json" 'payload.map(item => item.id).sort().join(",") === ["'
 
 search_priority_json="$(scripts/commands/reminder/search.sh priority high "$filter_list")"
 json_assert "$search_priority_json" 'payload.length === 1 && payload[0].id === "'"$today_id"'"' "priority search is unexpected"
-
-search_flagged_json="$(scripts/commands/reminder/search.sh flagged "$source_list")"
-json_assert "$search_flagged_json" 'payload.length === 2 && payload.some(item => item.id === "'"$reminder_id"'") && payload.some(item => item.id === "'"$wrapper_id"'")' "flagged search is unexpected"
-
-search_urgent_json="$(scripts/commands/reminder/search.sh urgent "$source_list")"
-json_assert "$search_urgent_json" 'payload.length === 2 && payload.some(item => item.id === "'"$wrapper_id"'") && payload.some(item => item.id === "'"$subtask_child_id"'")' "urgent search is unexpected"
-
-search_nested_json="$(scripts/commands/reminder/search.sh nested "$source_list")"
-json_assert "$search_nested_json" 'payload.length === 1 && payload[0].id === "'"$subtask_child_id"'" && payload[0].parent_id === "'"$subtask_parent_id"'"' "nested search is unexpected"
-
-search_top_level_json="$(scripts/commands/reminder/search.sh top-level "$source_list")"
-json_assert "$search_top_level_json" 'payload.length === 3 && payload.every(item => item.parent_id === null && item.parent_name === null)' "top-level search is unexpected"
-
-search_parent_json="$(scripts/commands/reminder/search.sh parent-id "$subtask_parent_id" "$source_list")"
-json_assert "$search_parent_json" 'payload.length === 1 && payload[0].id === "'"$subtask_child_id"'"' "parent-id search is unexpected"
 
 search_due_json="$(scripts/commands/reminder/search.sh has-due-date "$filter_list")"
 json_assert "$search_due_json" 'payload.some(item => item.name === "'"$today_reminder"'") && payload.some(item => item.name === "'"$upcoming_reminder"'")' "has-due-date search is missing reminders"

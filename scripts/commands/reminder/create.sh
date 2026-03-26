@@ -51,7 +51,9 @@ cmd=(add --title "$reminder_name" --list "$list_name")
 [[ -n "$due_value" ]] && cmd+=(--due "$due_value")
 [[ -n "$priority" ]] && cmd+=(--priority "$priority")
 
-if raw=$(try_run_remindctl_json "${cmd[@]}"); then
+if created_json=$(run_reminderkit_helper create "$list_name" "$reminder_name" "${body:-}" "${due_value:-}" "${priority:-}" 2>/dev/null); then
+  created_via_reminderkit="true"
+elif raw=$(try_run_remindctl_json "${cmd[@]}"); then
   created_json=$(printf '%s' "$raw" | "$JQ_BIN" --arg body "${body:-}" '
     def first_reminder: if type == "array" then .[0] elif type == "object" then (.["reminder"]? // .["result"]? // .) else . end;
     (first_reminder) as $r |
@@ -61,11 +63,7 @@ if raw=$(try_run_remindctl_json "${cmd[@]}"); then
      due_date: $r.dueDate}
   ')
 else
-  if created_json=$(run_reminderkit_helper create "$list_name" "$reminder_name" "${body:-}" "${due_value:-}" "${priority:-}" 2>/dev/null); then
-    created_via_reminderkit="true"
-  else
-    created_json=$(run_reminder_applescript create.applescript "$list_name" "$reminder_name" "${body:-}" "${due_value:-}" "${priority:-}")
-  fi
+  created_json=$(run_reminder_applescript create.applescript "$list_name" "$reminder_name" "${body:-}" "${due_value:-}" "${priority:-}")
 fi
 
 created_id=$(printf '%s' "$created_json" | "$JQ_BIN" -r '.id')

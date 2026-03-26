@@ -197,6 +197,7 @@ scripts/commands/reminder/edit.sh --id "REMINDER-ID" due_date "missing"
 scripts/commands/reminder/edit.sh --id "REMINDER-ID" flagged true
 scripts/commands/reminder/edit.sh --id "REMINDER-ID" urgent true
 scripts/commands/reminder/edit.sh --id "REMINDER-ID" parent_id "PARENT-ID"
+scripts/commands/reminder/edit.sh --id "REMINDER-ID" parent_id missing
 scripts/commands/reminder/edit-by-id.sh "REMINDER-ID" priority medium
 scripts/commands/reminder/reschedule.sh --id "REMINDER-ID" "2030-01-15"
 scripts/commands/reminder/reschedule-by-id.sh "REMINDER-ID" "2030-01-15 12:00"
@@ -226,6 +227,7 @@ scripts/commands/reminder/search.sh text "milk" "Inbox"
 
 Nested reminder metadata is public as `parent_id` and `parent_name`.
 Nested reminder writes are public through `create.sh --parent-id` and `edit.sh parent_id`.
+Detaching a subtask with `edit.sh --id ... parent_id missing` may return a new reminder UUID because the fallback lifts the subtask to top level and deletes the old child.
 `urgent` is public and is backed by ReminderKit, not by AppleScript or `remindctl`.
 
 Backend policy:

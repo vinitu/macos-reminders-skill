@@ -19,6 +19,7 @@ prop="${3}"
 value="$4"
 # shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
+COMMAND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 [[ -n "$JQ_BIN" ]] || { echo "jq required" >&2; exit 1; }
 
@@ -40,10 +41,50 @@ unsupported_parent_name() {
   exit 1
 }
 
+detach_subtask_to_top_level() {
+  local reminder_json="$1"
+  local full_id="$2"
+  local list_name name body due_date priority completed flagged urgent
+  local direct_children_json direct_child_id replacement_json replacement_id
+  local create_cmd=()
+
+  list_name=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.list')
+  name=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.name')
+  body=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.body // ""')
+  due_date=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.due_date // ""')
+  priority=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.priority')
+  completed=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.completed')
+  flagged=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.flagged')
+  urgent=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.urgent')
+
+  create_cmd=("$COMMAND_DIR/create.sh" "$list_name" "$name")
+  [[ -n "$body" ]] && create_cmd+=("$body")
+  [[ -n "$due_date" ]] && create_cmd+=(--due "$due_date")
+  [[ "$priority" != "none" ]] && create_cmd+=(--priority "$priority")
+  [[ "$flagged" == "true" ]] && create_cmd+=(--flagged)
+  [[ "$urgent" == "true" ]] && create_cmd+=(--urgent)
+
+  replacement_json=$("${create_cmd[@]}")
+  replacement_id=$(printf '%s' "$replacement_json" | "$JQ_BIN" -r '.id')
+
+  direct_children_json=$(run_reminderkit_helper children "$full_id" "$list_name")
+  while IFS= read -r direct_child_id; do
+    [[ -n "$direct_child_id" ]] || continue
+    run_reminderkit_helper reparent "$direct_child_id" "$replacement_id" >/dev/null
+  done < <(printf '%s' "$direct_children_json" | "$JQ_BIN" -r '.[].id')
+
+  if [[ "$completed" == "true" ]]; then
+    "$COMMAND_DIR/complete.sh" --id "$replacement_id" >/dev/null
+  fi
+
+  "$COMMAND_DIR/delete.sh" --id "$full_id" >/dev/null
+  "$COMMAND_DIR/get.sh" --id "$replacement_id"
+}
+
 if raw=$(try_remindctl_show_all_json); then
   resolved=$(resolve_reminder_id "$id_arg" <<< "$raw")
   prop_key="${prop//-/_}"
-  reminder_json=$(get_single_reminder_match_json "$id_arg" <<< "$raw" | normalize_single_reminder_json)
+  reminder_json=$(get_single_reminder_match_json "$id_arg" <<< "$raw" | normalize_single_reminder_json | augment_reminders_json)
   list_name=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.list')
   cmd=(edit "$resolved")
   case "$prop_key" in
@@ -59,24 +100,24 @@ if raw=$(try_remindctl_show_all_json); then
       bool_value=$(normalize_bool_value "$value")
       ensure_boolean_value "$bool_value"
       run_reminderkit_helper set-flagged "$resolved" "$bool_value" >/dev/null
-      "$(dirname "$0")/get.sh" --id "$resolved"
+      "$COMMAND_DIR/get.sh" --id "$resolved"
       exit 0
       ;;
     urgent)
       bool_value=$(normalize_bool_value "$value")
       ensure_boolean_value "$bool_value"
       run_reminderkit_helper set-urgent "$resolved" "$bool_value" >/dev/null
-      "$(dirname "$0")/get.sh" --id "$resolved"
+      "$COMMAND_DIR/get.sh" --id "$resolved"
       exit 0
       ;;
     parent_id)
       if [[ "$value" == "missing" ]]; then
-        echo "Detaching a reminder from its parent is not supported by the public backend" >&2
-        exit 1
+        detach_subtask_to_top_level "$reminder_json" "$resolved"
+        exit 0
       fi
       resolved_parent_id=$(resolve_reminder_id "$value" <<< "$raw")
       run_reminderkit_helper reparent "$resolved" "$resolved_parent_id" >/dev/null
-      "$(dirname "$0")/get.sh" --id "$resolved"
+      "$COMMAND_DIR/get.sh" --id "$resolved"
       exit 0
       ;;
     parent_name)
@@ -108,8 +149,8 @@ case "$prop_key" in
     ;;
   parent_id)
     if [[ "$value" == "missing" ]]; then
-      echo "Detaching a reminder from its parent is not supported by the public backend" >&2
-      exit 1
+      detach_subtask_to_top_level "$reminder_json" "$full_id"
+      exit 0
     fi
     resolved_parent_id=$(resolve_full_reminder_id_or_error "$value")
     run_reminderkit_helper reparent "$full_id" "$resolved_parent_id" >/dev/null

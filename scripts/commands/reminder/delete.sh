@@ -25,7 +25,6 @@ if raw=$(try_remindctl_show_all_json); then
 fi
 
 reminder_json=$(load_reminder_by_id_or_error "$id_arg")
-list_name=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.list')
 full_id=$(printf '%s' "$reminder_json" | "$JQ_BIN" -r '.id')
-run_reminder_applescript delete-by-id.applescript "$list_name" "$full_id" >/dev/null
+run_reminderkit_helper delete "$full_id" >/dev/null
 "$JQ_BIN" -n --arg id "$full_id" '{deleted: true, id: $id}'
