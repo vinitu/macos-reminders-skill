@@ -152,6 +152,7 @@ List and count:
 ```bash
 scripts/commands/reminder/list.sh
 scripts/commands/reminder/list.sh "Inbox"
+scripts/commands/reminder/count.sh
 scripts/commands/reminder/count.sh "Inbox"
 ```
 
@@ -182,12 +183,33 @@ Read:
 
 ```bash
 scripts/commands/reminder/get.sh --id "REMINDER-ID"
+scripts/commands/reminder/get.sh --id "REMINDER-ID" name
 scripts/commands/reminder/get.sh --id "REMINDER-ID" body
+scripts/commands/reminder/get.sh --id "REMINDER-ID" due_date
+scripts/commands/reminder/get.sh --id "REMINDER-ID" priority
 scripts/commands/reminder/get.sh --id "REMINDER-ID" flagged
 scripts/commands/reminder/get.sh --id "REMINDER-ID" urgent
 scripts/commands/reminder/get.sh --id "REMINDER-ID" parent_id
+scripts/commands/reminder/get.sh --id "REMINDER-ID" parent_name
 scripts/commands/reminder/get-by-id.sh "REMINDER-ID" priority
+scripts/commands/reminder/get-by-id.sh "Inbox" "REMINDER-ID" body
 ```
+
+Supported reminder properties for `get.sh` / `get-by-id.sh`:
+
+- `id`
+- `name`
+- `list`
+- `body`
+- `completed`
+- `priority`
+- `due_date`
+- `flagged`
+- `urgent`
+- `parent_id`
+- `parent_name`
+
+`body` is the public field for Reminders.app notes text.
 
 Edit, move, complete, and delete:
 
@@ -224,6 +246,20 @@ scripts/commands/reminder/search.sh parent-id "PARENT-ID" "Inbox"
 scripts/commands/reminder/search.sh has-due-date "Inbox"
 scripts/commands/reminder/search.sh text "milk" "Inbox"
 ```
+
+Search modes:
+
+- `exact-name <list-name> <reminder-name>`
+- `id <id>`
+- `incomplete [list-name]`
+- `priority <none|low|medium|high> [list-name]`
+- `has-due-date [list-name]`
+- `text <query> [list-name]`
+- `flagged [list-name]`
+- `urgent [list-name]`
+- `nested [list-name]`
+- `top-level [list-name]`
+- `parent-id <parent-id> [list-name]`
 
 Nested reminder metadata is public as `parent_id` and `parent_name`.
 Nested reminder writes are public through `create.sh --parent-id` and `edit.sh parent_id`.
