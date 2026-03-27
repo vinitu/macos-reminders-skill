@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Output: JSON (reminder object or {id, property, value} when property given).
-# Prefer: remindctl + jq. Fallback: AppleScript when remindctl is missing.
+# Prefer: remindctl + jq for speed. Fallback: AppleScript + ReminderKit when remindctl is unavailable or fails.
 # Example (full reminder):
 #   {
 #     "id": "...",
@@ -24,20 +24,36 @@ id_arg="$2"
 property="${3:-}"
 # shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
+[[ -n "$JQ_BIN" ]] || { echo "jq required" >&2; exit 1; }
 
-if [[ -n "$REMINDCTL_BIN" ]]; then
-  [[ -n "$JQ_BIN" ]] || { echo "jq required when using remindctl" >&2; exit 1; }
-  raw=$(remindctl_show_all_json)
-  normalized=$(get_single_reminder_match_json "$id_arg" <<< "$raw" | normalize_single_reminder_json)
+emit_property_json() {
+  local reminder_json="$1"
+  local prop_key="$2"
+
+  printf '%s' "$reminder_json" | "$JQ_BIN" -c --arg k "$prop_key" '
+    if has($k) then
+      {id: .id, property: $k, value: .[$k]}
+    else
+      error("Unsupported property: " + $k)
+    end
+  '
+}
+
+if raw=$(try_remindctl_show_all_json); then
+  normalized=$(get_single_reminder_match_json "$id_arg" <<< "$raw" | normalize_single_reminder_json | augment_reminders_json)
   if [[ -z "$property" ]]; then
     printf '%s' "$normalized"
   else
     prop_key="${property//-/_}"
-    value=$(printf '%s' "$normalized" | "$JQ_BIN" -r --arg k "$prop_key" '.[$k] // empty')
-    full_id=$(printf '%s' "$normalized" | "$JQ_BIN" -r '.id')
-    "$JQ_BIN" -n --arg id "$full_id" --arg property "$prop_key" --arg value "$value" '{id: $id, property: $property, value: $value}'
+    emit_property_json "$normalized" "$prop_key"
   fi
   exit 0
 fi
 
-exec_reminder_applescript_optional_last_arg get-reminder-by-id.applescript "$property" "$id_arg"
+normalized=$(load_reminder_by_id_or_error "$id_arg" | augment_reminders_json)
+if [[ -z "$property" ]]; then
+  printf '%s' "$normalized"
+else
+  prop_key="${property//-/_}"
+  emit_property_json "$normalized" "$prop_key"
+fi

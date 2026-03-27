@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Output: always JSON (array of reminders due before the given date).
-# Prefer: remindctl + jq. Fallback: AppleScript when remindctl is missing.
+# Prefer: remindctl + jq for speed. Fallback: AppleScript + ReminderKit when remindctl is unavailable or fails.
 # Example:
 # [
 #   {
@@ -22,16 +22,40 @@ list_name="${2:-}"
 # shellcheck source=scripts/commands/reminder/_lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib/common.sh"
 
-if [[ -n "$REMINDCTL_BIN" ]]; then
+normalize_cutoff_datetime() {
+  local raw="$1"
+
+  if [[ "$raw" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    printf '%s 00:00:00' "$raw"
+  elif [[ "$raw" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}$ ]]; then
+    printf '%s:00' "$raw"
+  else
+    printf '%s' "$raw"
+  fi
+}
+
+if raw=$(try_remindctl_all_or_list_json "$list_name"); then
   [[ -n "$JQ_BIN" ]] || { echo "jq required when using remindctl" >&2; exit 1; }
-  raw=$(remindctl_all_or_list_json "$list_name")
-  normalize_reminders_json <<< "$raw" | "$JQ_BIN" --arg cutoff "$cutoff_date" '
-    def local_due_date:
-      try (fromdateiso8601 | strflocaltime("%Y-%m-%d"))
-      catch .[0:10];
-    [.[] | select(.completed == false and .due_date != null and (.due_date | local_due_date) < $cutoff)]
+  cutoff_datetime=$(normalize_cutoff_datetime "$cutoff_date")
+  normalize_reminders_json <<< "$raw" | augment_reminders_json | "$JQ_BIN" --arg cutoff "$cutoff_datetime" '
+    def local_due_datetime:
+      try (fromdateiso8601 | strflocaltime("%Y-%m-%d %H:%M:%S"))
+      catch (
+        if test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") then
+          . + " 00:00:00"
+        elif test("^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$") then
+          . + ":00"
+        else
+          .
+        end
+      );
+    [.[] | select(.completed == false and .due_date != null and (.due_date | local_due_datetime) < $cutoff)]
   '
   exit 0
 fi
 
-exec_reminder_applescript_optional_last_arg due-before.applescript "$list_name" "$cutoff_date"
+if [[ -n "$list_name" ]]; then
+  run_reminder_applescript due-before.applescript "$cutoff_date" "$list_name" | augment_reminders_json
+else
+  run_reminder_applescript due-before.applescript "$cutoff_date" | augment_reminders_json
+fi

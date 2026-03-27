@@ -8,9 +8,9 @@
   priority: (
     if $item.priority == null then "none"
     elif $item.priority == 0 or $item.priority == "none" then "none"
-    elif $item.priority == 1 or $item.priority == "low" then "low"
+    elif $item.priority == 1 or $item.priority == "high" then "high"
     elif $item.priority == 5 or $item.priority == "medium" then "medium"
-    elif $item.priority == 9 or $item.priority == "high" then "high"
+    elif $item.priority == 9 or $item.priority == "low" then "low"
     else "none"
     end
   ),

@@ -29,7 +29,7 @@ if [[ $# -eq 1 ]]; then
 fi
 # 2+ args: could be <id> <property> or <list-name> <id> [property]
 if [[ $# -eq 2 ]]; then
-  if [[ "$2" == "id" || "$2" == "name" || "$2" == "list" || "$2" == "body" || "$2" == "completed" || "$2" == "priority" || "$2" == "due_date" ]]; then
+  if [[ "$2" == "id" || "$2" == "name" || "$2" == "list" || "$2" == "body" || "$2" == "completed" || "$2" == "priority" || "$2" == "due_date" || "$2" == "flagged" || "$2" == "parent_id" || "$2" == "parent_name" || "$2" == "urgent" ]]; then
     exec "$(dirname "$0")/get.sh" --id "$1" "$2"
   else
     exec "$(dirname "$0")/get.sh" --id "$2"
